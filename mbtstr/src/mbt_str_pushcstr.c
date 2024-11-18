@@ -9,5 +9,6 @@ bool mbt_str_pushcstr(struct mbt_str *str, const char *cstr)
             return false;
         }
     }
+
     return true;
 }
