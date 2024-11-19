@@ -7,7 +7,7 @@ void mbt_cview_fprint(struct mbt_cview view, FILE *stream)
 {
     for (size_t i = 0; i < view.size; i++)
     {
-        char c = view.data[i];
+        unsigned char c = view.data[i];
 
         if (isprint(c))
         {
@@ -15,8 +15,7 @@ void mbt_cview_fprint(struct mbt_cview view, FILE *stream)
         }
         else
         {
-            fprintf(stream, "U+00%2X", c);
+            fprintf(stream, "U+%04X", c);
         }
     }
-    fprintf(stream, "\n");
 }
