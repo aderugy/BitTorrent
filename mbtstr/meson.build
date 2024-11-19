@@ -16,7 +16,7 @@ mbtstr_inc = [ include_directories('include') ]
 
 mbtstr = shared_library(
   'mbtstr',
-  sources: [ 'src/mbt_str_free.c', 'src/mbt_cview_cmp.c', 'src/mbt_cview_contains.c', 'src/mbt_cview_fprint.c', 'src/mbt_str_ctor.c', 'src/mbt_str_dtor.c', 'src/mbt_str_free.c', 'src/mbt_str_pushc.c', 'src/mbt_str_pushcstr.c', 'src/mbt_str_pushcv.c' ],
+  sources: [ 'src/mbt_str_init.c', 'src/mbt_cview_cmp.c', 'src/mbt_cview_contains.c', 'src/mbt_cview_fprint.c', 'src/mbt_str_ctor.c', 'src/mbt_str_dtor.c', 'src/mbt_str_free.c', 'src/mbt_str_pushc.c', 'src/mbt_str_pushcstr.c', 'src/mbt_str_pushcv.c' ],
   include_directories : mbtstr_inc + [ include_directories('src') ],
   install: true,
 )
