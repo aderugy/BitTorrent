@@ -3,14 +3,9 @@
 
 bool mbt_str_pushc(struct mbt_str *str, char c)
 {
-    if (c == 0)
-    {
-        return true;
-    }
-
     if (str->capacity == str->size)
     {
-        size_t new_capacity = str->capacity + str->capacity / 2;
+        size_t new_capacity = str->capacity *= 2;
 
         char *tmp = realloc(str->data, new_capacity + 1);
         if (tmp == NULL)
@@ -23,8 +18,8 @@ bool mbt_str_pushc(struct mbt_str *str, char c)
     }
 
     str->data[str->size] = c;
+    str->data[str->size + 1] = 0;
     str->size++;
 
-    str->data[str->size] = 0;
     return true;
 }
