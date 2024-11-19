@@ -1,7 +1,6 @@
 project(
   'mbtstr', # project name
   'c', # project language
-  meson_version : '>= 1.4.2', # meson minimum version
   version : '1.0.0', # project version
   default_options : [
     'c_args=-D_GNU_SOURCE',
