@@ -5,11 +5,8 @@ project(
   default_options : [
     'c_args=-D_GNU_SOURCE',
     'c_std=c99', # -std=c99
-    'debug=true', # -g
-    'optimization=0', # -O0
-    'warning_level=2', # -Wall -Wextra -Wpedantic
+    'warning_level=2', # -Wall -Wextra
     'werror=true', # -Werror
-    'b_sanitize=address,undefined', # -fsanitize=address,undefined
   ],
 )
 
