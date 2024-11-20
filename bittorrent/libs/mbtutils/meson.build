@@ -1,4 +1,3 @@
-
 mbtutils_inc = [ include_directories('include/') ]
 
 #subdir('./include/mbt/utils/mbtstr/')
