@@ -1,8 +1,8 @@
 #include "epoll_server.h"
 
 #include <err.h>
-#include <errno.h>
 #include <netdb.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -64,8 +64,13 @@ int create_and_bind(struct addrinfo *addrinfo)
  */
 int prepare_socket(const char *ip, const char *port)
 {
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
     struct addrinfo *addrinfo = NULL;
-    if (getaddrinfo(ip, port, NULL, &addrinfo))
+    if (getaddrinfo(ip, port, &hints, &addrinfo))
     {
         errx(1, "getaddrinfo");
     }
@@ -105,7 +110,8 @@ struct connection_t *accept_client(int epoll_instance, int server_socket,
         return NULL;
     }
 
-    struct epoll_event event = { .events = EPOLLIN, .data = { .fd = c_fd } };
+    struct epoll_event event = { .events = EPOLLIN | EPOLLOUT,
+                                 .data = { .fd = c_fd } };
     if (epoll_ctl(epoll_instance, EPOLL_CTL_ADD, c_fd, &event) == -1)
     {
         errx(EXIT_FAILURE, "epoll_ctl");
@@ -120,6 +126,102 @@ struct connection_t *accept_client(int epoll_instance, int server_socket,
     return next;
 }
 
+static void process_message(struct connection_t *clients,
+                            struct connection_t *client,
+                            char message[BUFFER_SIZE], int read)
+{
+    // Allocate space for new string
+    client->buffer = client->buffer == NULL
+        ? xcalloc(BUFFER_SIZE, sizeof(char))
+        : xrealloc(client->buffer,
+                   (client->nb_read + BUFFER_SIZE) * sizeof(char));
+
+    // Copy the new buffer
+    memcpy(client->buffer + client->nb_read, message, read);
+    client->nb_read += read;
+
+    // Broadcast to clients
+    if (client->buffer[client->nb_read - 1] == '\n')
+    {
+        while (clients)
+        {
+            int sent = 0;
+            while (sent < client->nb_read) // Ensure everything is sent
+            {
+                int s = send(clients->client_socket, client->buffer + sent,
+                             client->nb_read - sent, 0);
+
+                if (s == -1)
+                {
+                    errx(EXIT_FAILURE, "send");
+                }
+
+                sent += s;
+            }
+
+            clients = clients->next;
+        }
+
+        free(client->buffer);
+        client->buffer = NULL;
+        client->nb_read = 0;
+    }
+}
+
+static void read_events(int sfd, int epfd, struct connection_t **clients)
+{
+    struct epoll_event events[MAX_CONCURRENT_IO];
+
+    // Waiting for an I/O event
+    int nb_fd = epoll_wait(epfd, events, MAX_CONCURRENT_IO, -1);
+    if (nb_fd == -1)
+    {
+        errx(EXIT_FAILURE, "epoll_wait");
+    }
+
+    // Iterate through events
+    for (int i = 0; i < nb_fd; i++)
+    {
+        struct epoll_event current = events[i];
+
+        // Make sure client has sent data to avoid blocking recv
+        if ((current.events & EPOLLIN) == 0)
+        {
+            continue;
+        }
+
+        // Because we saved the client fd when we add it in the epoll
+        int client_fd = current.data.fd;
+
+        // If the client doesn't exist, create it
+        struct connection_t *client = find_client(*clients, client_fd);
+        if (!client)
+        {
+            // Accept and add client to clients
+            client = accept_client(epfd, sfd, *clients);
+            *clients = client;
+
+            if (!client)
+            {
+                errx(EXIT_FAILURE, "Unknown fd");
+            }
+        }
+
+        // Read client data
+        char buffer[BUFFER_SIZE];
+        int r = recv(client->client_socket, buffer, BUFFER_SIZE, 0);
+
+        if (r <= 0) // Case where connection ended
+        {
+            *clients = remove_client(*clients, client->client_socket);
+        }
+        else // Process data
+        {
+            process_message(*clients, client, buffer, r);
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
     if (argc != 3)
@@ -130,20 +232,24 @@ int main(int argc, char *argv[])
     char *ip = argv[1];
     char *port = argv[2];
 
+    // Create epoll
     int epoll_fd = epoll_create1(0);
     if (epoll_fd == -1)
     {
         return 1;
     }
 
+    // Create, bind and listen to the socket
     int socket_fd = prepare_socket(ip, port);
     if (socket_fd <= 0)
     {
         errx(EXIT_FAILURE, "prepare_socket");
     }
 
-    struct epoll_event event = { .events = EPOLLIN,
+    // We add the socket to the list of interests
+    struct epoll_event event = { .events = EPOLLIN | EPOLLOUT,
                                  .data = { .fd = socket_fd } };
+
     if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, socket_fd, &event) == -1)
     {
         errx(EXIT_FAILURE, "create epoll");
@@ -152,51 +258,15 @@ int main(int argc, char *argv[])
     struct connection_t *clients = NULL;
     while (42)
     {
-        struct epoll_event events[MAX_CONCURRENT_IO];
-
-        int nb_fd = epoll_wait(epoll_fd, events, MAX_CONCURRENT_IO, -1);
-        if (nb_fd == -1)
-        {
-            errx(EXIT_FAILURE, "epoll_wait");
-        }
-
-        for (int i = 0; i < nb_fd; i++)
-        {
-            struct epoll_event current = events[i];
-            int client_fd = current.data.fd;
-
-            struct connection_t *client = find_client(clients, client_fd);
-            if (!client)
-            {
-                client = accept_client(epoll_fd, socket_fd, clients);
-                clients = client;
-
-                if (!client)
-                {
-                    errx(EXIT_FAILURE, "Unknown fd");
-                }
-            }
-
-            char buffer[BUFFER_SIZE + 1];
-            int r = recv(client->client_socket, buffer, BUFFER_SIZE, 0);
-
-            if (r <= 0)
-            {
-                printf("Removing client\n");
-                epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client->client_socket, NULL);
-                clients = remove_client(clients, client->client_socket);
-            }
-            else
-            {
-                buffer[r] = 0;
-                printf("%s", buffer);
-            }
-        }
+        // Read and process events
+        read_events(socket_fd, epoll_fd, &clients);
     }
 
+    // Close fds. Supposedly unreachable
     close(epoll_fd);
     close(socket_fd);
 
+    // Free remaining clients
     while (clients)
     {
         int fd = clients->client_socket;
