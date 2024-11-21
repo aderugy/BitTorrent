@@ -13,7 +13,7 @@
 #include "connection.h"
 #include "utils/xalloc.h"
 
-#define MAX_CONCURRENT_IO 10
+#define MAX_CONCURRENT_IO 2
 #define BUFFER_SIZE 1000
 
 /**
@@ -149,7 +149,7 @@ static void process_message(struct connection_t *clients,
             while (sent < client->nb_read) // Ensure everything is sent
             {
                 int s = send(clients->client_socket, client->buffer + sent,
-                             client->nb_read - sent, 0);
+                             client->nb_read - sent, MSG_NOSIGNAL);
 
                 if (s == -1)
                 {
@@ -192,19 +192,22 @@ static void read_events(int sfd, int epfd, struct connection_t **clients)
 
         // Because we saved the client fd when we add it in the epoll
         int client_fd = current.data.fd;
+        struct connection_t *client = NULL;
 
-        // If the client doesn't exist, create it
-        struct connection_t *client = find_client(*clients, client_fd);
-        if (!client)
+        if (client_fd == sfd)
         {
-            // Accept and add client to clients
             client = accept_client(epfd, sfd, *clients);
             *clients = client;
+            continue;
+        }
+        else
+        {
+            client = find_client(*clients, client_fd);
+        }
 
-            if (!client)
-            {
-                errx(EXIT_FAILURE, "Unknown fd");
-            }
+        if (!client)
+        {
+            errx(EXIT_FAILURE, "Unknown fd");
         }
 
         // Read client data
@@ -233,7 +236,7 @@ int main(int argc, char *argv[])
     char *port = argv[2];
 
     // Create epoll
-    int epoll_fd = epoll_create1(0);
+    int epoll_fd = epoll_create1(EPOLL_CLOEXEC);
     if (epoll_fd == -1)
     {
         return 1;
@@ -256,7 +259,7 @@ int main(int argc, char *argv[])
     }
 
     struct connection_t *clients = NULL;
-    while (42)
+    while (true)
     {
         // Read and process events
         read_events(socket_fd, epoll_fd, &clients);
