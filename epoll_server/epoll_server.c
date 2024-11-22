@@ -196,8 +196,7 @@ static void read_events(int sfd, int epfd, struct connection_t **clients)
 
         if (client_fd == sfd)
         {
-            client = accept_client(epfd, sfd, *clients);
-            *clients = client;
+            *clients = accept_client(epfd, sfd, *clients);
             continue;
         }
         else
