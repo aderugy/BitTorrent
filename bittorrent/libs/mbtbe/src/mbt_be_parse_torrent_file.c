@@ -23,7 +23,7 @@ bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
     }
     else if (strcmp(key.data, "creation date") == 0)
     {
-        torrent->creation_date = &val->v.str;
+        torrent->creation_date = val->v.nb;
     }
     else if (strcmp(key.data, "info"))
     {

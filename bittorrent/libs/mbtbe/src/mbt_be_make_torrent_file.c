@@ -26,16 +26,6 @@ struct mbt_be_pair *transform_to_pair(struct mbt_be_node *node, char *value)
     return pair;
 }
 
-bool init_announce(struct mbt_be_node *node, struct torrent_file *torrent)
-{
-    if (node->type != MBT_BE_STR)
-    {
-        return false;
-    }
-    torrent->announce = &node->v.str;
-    return true;
-}
-
 uint64_t get_file_size(const char *filename)
 {
     struct stat st;
@@ -47,7 +37,7 @@ uint64_t get_file_size(const char *filename)
     return st.st_size;
 }
 
-struct mbt_be_pair *get_creation_date(struct torrent_file *torrent)
+struct mbt_be_pair *get_creation_date(struct mbt_torrent_file *torrent)
 {
     struct mbt_be_node *node = mbt_be_num_init(0);
     if (node->type != MBT_BE_NUM)
@@ -76,15 +66,10 @@ struct mbt_be_pair *get_creation_date(struct torrent_file *torrent)
     return pair;
 }
 
-struct mbt_be_pair *get_user(struct torrent_file *torrent)
+struct mbt_be_pair *get_user(const char *path)
 {
-    struct mbt_str *path = torrent->path;
-    if (path->size == 0)
-    {
-        return NULL;
-    }
     struct stat st;
-    if (stat(path->data, &st) != 0)
+    if (stat(path, &st) != 0)
     {
         perror("stat");
         exit(EXIT_FAILURE);
@@ -115,26 +100,30 @@ struct mbt_be_pair *get_user(struct torrent_file *torrent)
 
 bool mbt_be_make_torrent_file(const char *path)
 {
-    struct torrent_file *torrent = calloc(1, sizeof(struct torrent_file));
     struct mbt_str *data = mbt_str_init(64);
     if (!mbt_str_ctor(data, 64))
     {
-        mbt_str_free(data);
+        errx(1, "make torrent file : cannot init data");
         return false;
     }
     if (!mbt_str_read_file(path, data))
     {
-        mbt_str_free(data);
+        errx(1, "make torrent file : cannot read file");
         return false;
     }
 
-    struct mbt_be_node *node = mbt_be_dict_init(NULL);
+    struct mbt_be_pair **d = calloc(1 + 1, sizeof(struct mbt_be_pair));
+    d[0] = get_user(path);
+
+    struct mbt_be_node *node = mbt_be_dict_init(d);
 
     if (node->type != MBT_BE_DICT)
     {
-        errx(1, "mbt be make torent file");
+        errx(1, "mbt be make torent file not a dict");
         return false;
     }
+
+    mbt_be_free(node);
 
     return true;
 }

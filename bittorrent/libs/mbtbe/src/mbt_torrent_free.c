@@ -13,20 +13,11 @@ void mbt_torrent_free(struct mbt_torrent *torrent)
     {
         mbt_str_free(torrent->created_by);
     }
-    if (torrent->creation_date)
-    {
-        mbt_str_free(torrent->creation_date);
-    }
+
     if (torrent->info)
     {
-        if (torrent->info->name)
-        {
-            mbt_str_free(torrent->info->name);
-        }
-        if (torrent->info->pieces)
-        {
-            mbt_str_free(torrent->info->pieces);
-        }
+            mbt_str_free(&torrent->info->name);
+            mbt_str_free(&torrent->info->pieces);
     }
     free(torrent->info);
     free(torrent);
