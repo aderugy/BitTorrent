@@ -19,9 +19,6 @@
 // Forward declaration
 struct mbt_file_handler;
 
-// Forward declaration
-struct mbt_file;
-
 struct mbt_file_handler *mbt_file_handler_init(struct mbt_torrent *torrent)
     MBT_NONNULL(1);
 
