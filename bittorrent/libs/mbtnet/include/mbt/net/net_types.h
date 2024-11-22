@@ -1,8 +1,13 @@
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef NET_TYPES_H
+#define NET_TYPES_H
 
 #include <arpa/inet.h>
 #include <mbt/be/torrent.h>
+#include <mbt/be/types.h>
+#include <mbt/net/context.h>
+#include <mbt/net/leeching.h>
+#include <mbt/net/peer.h>
+#include <mbt/net/tracker.h>
 #include <mbt/utils/str.h>
 
 #include "bits/stdint-uintn.h"
@@ -17,9 +22,13 @@ enum tracker_event
 
 struct mbt_net_context
 {
-    struct mbt_torrent *t;
-    struct in_addr ip;
-    uint16_t port;
+    struct mbt_torrent *torrent;
+
+    char *ip;
+    char *port;
+
+    char *info_hash;
+    char *peer_id;
 
     uint16_t downloaded;
     uint16_t uploaded;
@@ -35,4 +44,4 @@ struct mbt_peer
     struct mbt_str *port;
 };
 
-#endif // !TYPES_H
+#endif // !NET_TYPES_H

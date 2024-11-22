@@ -9,6 +9,7 @@ project(
     'werror=true', # -Werror
     'debug=true',
     'buildtype=debug',
+    'b_sanitize=address,undefined',
   ],
 )
 
