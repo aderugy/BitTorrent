@@ -27,27 +27,35 @@ bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
     {
         torrent->creation_date = val->v.nb;
     }
-    else if (strcmp(key.data, "info"))
+    else if (strcmp(key.data, "info") == 0)
     {
-        for (size_t i = 0; node->v.dict[i]; i++)
+        for (size_t i = 0; val->v.dict[i]; i++)
         {
-            struct mbt_cview key = MBT_CVIEW_OF(node->v.dict[i]->key);
-            struct mbt_be_node *val = node->v.dict[i]->val;
-            if (strcmp(key.data, "pieces"))
+            struct mbt_cview key = MBT_CVIEW_OF(val->v.dict[i]->key);
+            struct mbt_be_node *nval = val->v.dict[i]->val;
+            if (strcmp(key.data, "pieces") == 0)
             {
-                torrent->info->pieces = val->v.str;
+                printf("Here 1\n");
+                torrent->info->pieces = nval->v.str;
             }
-            else if (strcmp(key.data, "piece length"))
+            else if (strcmp(key.data, "piece length") == 0)
             {
-                torrent->info->piece_length = val->v.nb;
+                printf("Here 2\n");
+                torrent->info->piece_length = nval->v.nb;
             }
-            else if (strcmp(key.data, "name"))
+            else if (strcmp(key.data, "name") == 0)
             {
-                torrent->info->name = val->v.str;
+                printf("Here 3\n");
+                torrent->info->name = nval->v.str;
             }
-            else if (strcmp(key.data, "length"))
+            else if (strcmp(key.data, "length") == 0)
             {
-                torrent->info->length = val->v.nb;
+                printf("Here 4\n");
+                torrent->info->length = nval->v.nb;
+            }
+            else
+            {
+                errx(1, "Unknown key: %s", key.data);
             }
         }
     }
