@@ -16,3 +16,4 @@ project(
 subdir('mbtutils')
 subdir('mbtbe')
 subdir('mbtnet')
+subdir('mbtfile')
