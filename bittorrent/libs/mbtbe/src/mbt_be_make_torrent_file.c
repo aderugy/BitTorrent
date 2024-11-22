@@ -1,3 +1,4 @@
+#include <mbt/utils/file.h>
 #include <err.h>
 #include <mbt/be/torrent.h>
 #include <mbt/be/types.h>

@@ -1,4 +1,5 @@
 #include <mbt/be/bencode.h>
+#include <mbt/utils/file.h>
 #include <mbt/be/types.h>
 #include <mbt/utils/str.h>
 #include <mbt/utils/view.h>
