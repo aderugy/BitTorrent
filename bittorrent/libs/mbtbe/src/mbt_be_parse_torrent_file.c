@@ -17,11 +17,11 @@ bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
     struct mbt_be_node *val = node->v.dict[index]->val;
     if (strcmp(key.data, "announce") == 0)
     {
-        torrent->announce = &val->v.str;
+        mbt_str_pushcstr(torrent->announce, val->v.str.data);
     }
     else if (strcmp(key.data, "created by") == 0)
     {
-        torrent->created_by = &val->v.str;
+        mbt_str_pushcstr(torrent->created_by, val->v.str.data);
     }
     else if (strcmp(key.data, "creation date") == 0)
     {
@@ -35,22 +35,18 @@ bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
             struct mbt_be_node *nval = val->v.dict[i]->val;
             if (strcmp(key.data, "pieces") == 0)
             {
-                printf("Here 1\n");
                 torrent->info->pieces = nval->v.str;
             }
             else if (strcmp(key.data, "piece length") == 0)
             {
-                printf("Here 2\n");
                 torrent->info->piece_length = nval->v.nb;
             }
             else if (strcmp(key.data, "name") == 0)
             {
-                printf("Here 3\n");
                 torrent->info->name = nval->v.str;
             }
             else if (strcmp(key.data, "length") == 0)
             {
-                printf("Here 4\n");
                 torrent->info->length = nval->v.nb;
             }
             else
@@ -68,20 +64,20 @@ bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
 
 bool mbt_be_parse_torrent_file(const char *path, struct mbt_torrent *torrent)
 {
-    struct mbt_str *data = mbt_str_init(64);
+    struct mbt_str data;
 
-    if (!mbt_str_ctor(data, 64))
+    if (!mbt_str_ctor(&data, 64))
     {
         errx(1, "mbt be parse torrent file : cannot init data");
         return false;
     }
-    if (!mbt_str_read_file(path, data))
+    if (!mbt_str_read_file(path, &data))
     {
         errx(1, "mbt be parse torrent file : cannot read the file");
         return false;
     }
 
-    struct mbt_cview view = MBT_CVIEW_OF(*data);
+    struct mbt_cview view = MBT_CVIEW_OF(data);
 
     struct mbt_be_node *node = mbt_be_decode(&view);
 
@@ -99,6 +95,9 @@ bool mbt_be_parse_torrent_file(const char *path, struct mbt_torrent *torrent)
             return false;
         }
     }
+
+    mbt_be_free(node);
+    mbt_str_dtor(&data);
 
     return true;
 }

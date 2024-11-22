@@ -1,10 +1,15 @@
+#include <mbt/utils/str.h>
 #include <mbt/utils/view.h>
 
-#include "mbt/utils/str.h"
+#include "err.h"
 #include "stdlib.h"
 
 bool mbt_str_pushc(struct mbt_str *str, char c)
 {
+    if (!str->size)
+    {
+        errx(1, "there is not size on the str : val : %s", str->data);
+    }
     if (str->capacity == str->size)
     {
         size_t new_capacity = 3 + str->capacity * 2;

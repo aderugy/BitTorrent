@@ -12,3 +12,5 @@ mbtbe_dep = declare_dependency (
   include_directories : mbtbe_inc,
   link_with : mbtbe
 )
+
+subdir('tests')
