@@ -1,38 +1,73 @@
 #include <mbt/be/bencode.h>
+#include <mbt/be/types.h>
 #include <mbt/utils/str.h>
 #include <mbt/utils/view.h>
 #include <stddef.h>
-#include <stdlib.h>
 #include <string.h>
 
+#include "err.h"
 #include "mbt/be/torrent.h"
-struct mbt_torrent
-{
-    struct mbt_str *announce;
-    struct mbt_str *created_by;
-    struct mbt_str *creation_date;
-    struct info *info;
-};
 
-struct info
+bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
+                  size_t index)
 {
-    unsigned int lenght;
-    struct mbt_str *name;
-    unsigned int piece_lenght;
-    struct mbt_str *pieces;
-};
+    struct mbt_cview key = MBT_CVIEW_OF(node->v.dict[index]->key);
+    struct mbt_be_node *val = node->v.dict[index]->val;
+    if (strcmp(key.data, "announce") == 0)
+    {
+        torrent->announce = &val->v.str;
+    }
+    else if (strcmp(key.data, "created by") == 0)
+    {
+        torrent->created_by = &val->v.str;
+    }
+    else if (strcmp(key.data, "creation date") == 0)
+    {
+        torrent->creation_date = &val->v.str;
+    }
+    else if (strcmp(key.data, "info"))
+    {
+        for (size_t i = 0; node->v.dict[i]; i++)
+        {
+            struct mbt_cview key = MBT_CVIEW_OF(node->v.dict[i]->key);
+            struct mbt_be_node *val = node->v.dict[i]->val;
+            if (strcmp(key.data, "pieces"))
+            {
+                torrent->info->pieces = val->v.str;
+            }
+            else if (strcmp(key.data, "piece length"))
+            {
+                torrent->info->piece_length = val->v.nb;
+            }
+            else if (strcmp(key.data, "name"))
+            {
+                torrent->info->name = val->v.str;
+            }
+            else if (strcmp(key.data, "length"))
+            {
+                torrent->info->length = val->v.nb;
+            }
+        }
+    }
+    else
+    {
+        return false;
+    }
+    return true;
+}
 
 bool mbt_be_parse_torrent_file(const char *path, struct mbt_torrent *torrent)
 {
     struct mbt_str *data = mbt_str_init(64);
+
     if (!mbt_str_ctor(data, 64))
     {
-        mbt_str_free(data);
+        errx(1, "mbt be parse torrent file : cannot init data\n");
         return false;
     }
     if (!mbt_str_read_file(path, data))
     {
-        mbt_str_free(data);
+        errx(1, "mbt be parse torrent file : cannot read the file\n");
         return false;
     }
 
@@ -42,42 +77,16 @@ bool mbt_be_parse_torrent_file(const char *path, struct mbt_torrent *torrent)
 
     if (node->type != MBT_BE_DICT)
     {
-        mbt_str_free(data);
+        errx(1, "mbt be parse torrent file : the node is not a dict\n");
         return false;
     }
 
     for (size_t i = 0; node->v.dict[i]; i++)
     {
-        struct mbt_cview key = MBT_CVIEW_OF(node->v.dict[i]->key);
-        struct mbt_be_node *val = node->v.dict[i]->val;
-        if (strcmp(key.data, "announce") == 0)
+        if (!fill_torrent(torrent, node, i))
         {
-            torrent->announce = &val->v.str;
-        }
-        else if (strcmp(key.data, "created by") == 0)
-        {
-            torrent->created_by = &val->v.str;
-        }
-        else if (strcmp(key.data, "creation date") == 0)
-        {
-            torrent->creation_date = &val->v.str;
-        }
-        else if (strcmp(key.data, "info") == 0)
-        {
-            struct mbt_be_node *info = val;
-            struct mbt_be_node *name = info->v.dict[0]->val;
-            struct mbt_be_node *piece_lenght = info->v.dict[1]->val;
-            struct mbt_be_node *pieces = info->v.dict[2]->val;
-            torrent->info = malloc(sizeof(struct info));
-            if (!torrent->info)
-            {
-                mbt_str_free(data);
-                return false;
-            }
-            torrent->info->lenght = name->v.str.size;
-            torrent->info->name = &name->v.str;
-            torrent->info->piece_lenght = piece_lenght->v.nb;
-            torrent->info->pieces = &pieces->v.str;
+            errx(1, "fill torrent did not parse successfully\n");
+            return false;
         }
     }
 

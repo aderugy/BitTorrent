@@ -1,4 +1,6 @@
+#include <err.h>
 #include <mbt/be/torrent.h>
+#include <mbt/be/types.h>
 #include <mbt/utils/str.h>
 #include <pwd.h>
 #include <stdlib.h>
@@ -6,25 +8,6 @@
 #include <sys/types.h>
 
 #include "mbt/be/bencode.h"
-
-struct torrent_file
-{
-    struct mbt_str *announce;
-    struct mbt_str *created_by;
-    struct mbt_str *creation_date;
-    struct info *info;
-    struct mbt_str *path;
-};
-
-struct info
-{
-    struct mbt_str *piece_length;
-    struct mbt_str *pieces;
-    struct mbt_str *name;
-    uint64_t length;
-    struct files *files;
-    struct mbt_str *sha1;
-};
 
 struct mbt_be_pair *transform_to_pair(struct mbt_be_node *node, char *value)
 {
@@ -132,7 +115,7 @@ struct mbt_be_pair *get_user(struct torrent_file *torrent)
 
 bool mbt_be_make_torrent_file(const char *path)
 {
-    struct torrent_file *torrent = malloc(sizeof(struct torrent_file));
+    struct torrent_file *torrent = calloc(1, sizeof(struct torrent_file));
     struct mbt_str *data = mbt_str_init(64);
     if (!mbt_str_ctor(data, 64))
     {
@@ -149,7 +132,7 @@ bool mbt_be_make_torrent_file(const char *path)
 
     if (node->type != MBT_BE_DICT)
     {
-        mbt_str_free(data);
+        errx(1, "mbt be make torent file");
         return false;
     }
 

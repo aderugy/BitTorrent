@@ -1,22 +1,7 @@
 #include <mbt/be/torrent.h>
+#include <mbt/be/types.h>
 #include <mbt/utils/str.h>
-#include <stddef.h>
 #include <stdlib.h>
-struct mbt_torrent
-{
-    struct mbt_str *announce;
-    struct mbt_str *created_by;
-    struct mbt_str *creation_date;
-    struct info *info;
-};
-
-struct info
-{
-    unsigned int lenght;
-    struct mbt_str *name;
-    unsigned int piece_lenght;
-    struct mbt_str *pieces;
-};
 
 void mbt_torrent_free(struct mbt_torrent *torrent)
 {
