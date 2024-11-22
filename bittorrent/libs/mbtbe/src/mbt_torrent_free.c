@@ -1,5 +1,5 @@
 #include <mbt/be/torrent.h>
-#include <mbt/be/types.h>
+#include <mbt/be/types_mbtbe.h>
 #include <mbt/utils/str.h>
 #include <stdlib.h>
 

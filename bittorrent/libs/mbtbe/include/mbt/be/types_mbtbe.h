@@ -1,9 +1,7 @@
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef TYPES_MBTBE_H
+#define TYPES_MBTBE_H
 
-#include <ctype.h>
 #include <mbt/utils/str.h>
-#include <stdlib.h>
 struct mbt_torrent_file
 {
     struct mbt_str *announce;
@@ -31,4 +29,4 @@ struct info
     struct mbt_torrent_file **files;
 };
 
-#endif // !TYPES_H
+#endif // !TYPES_MBTBE_H

@@ -1,7 +1,7 @@
-#include <mbt/utils/file.h>
 #include <err.h>
 #include <mbt/be/torrent.h>
-#include <mbt/be/types.h>
+#include <mbt/be/types_mbtbe.h>
+#include <mbt/utils/file.h>
 #include <mbt/utils/str.h>
 #include <pwd.h>
 #include <stdlib.h>
@@ -10,22 +10,22 @@
 
 #include "mbt/be/bencode.h"
 #include "stdio.h"
-#include "unistd.h"
 
 struct mbt_be_pair *transform_to_pair(struct mbt_be_node *node, char *value)
 {
-    struct mbt_str *key = mbt_str_init(64);
-    if (!mbt_str_ctor(key, 64))
+    struct mbt_str key;
+    if (!mbt_str_ctor(&key, 64))
     {
-        mbt_str_free(key);
+        mbt_str_free(&key);
         return NULL;
     }
-    if (!mbt_str_pushcstr(key, value))
+    if (!mbt_str_pushcstr(&key, value))
     {
-        mbt_str_free(key);
+        mbt_str_free(&key);
         return NULL;
     }
-    struct mbt_be_pair *pair = mbt_be_pair_init(MBT_CVIEW_OF(*key), node);
+    struct mbt_be_pair *pair = mbt_be_pair_init(MBT_CVIEW_OF(key), node);
+    mbt_str_dtor(&key);
     return pair;
 }
 
@@ -40,32 +40,37 @@ uint64_t get_file_size(const char *filename)
     return st.st_size;
 }
 
-struct mbt_be_pair *get_creation_date(struct mbt_torrent_file *torrent)
+struct mbt_be_pair *get_creation_date(const char *path)
 {
-    struct mbt_be_node *node = mbt_be_num_init(0);
-    if (node->type != MBT_BE_NUM)
-    {
-        return NULL;
-    }
-
-    struct mbt_str *path = torrent->path;
-
-    if (path->size == 0)
-    {
-        return NULL;
-    }
-
     struct stat st;
-    if (stat(path->data, &st) != 0)
+    if (stat(path, &st) != 0)
     {
         perror("stat");
         exit(EXIT_FAILURE);
     }
 
-    node->v.nb = st.st_mtime;
-    node->type = MBT_BE_NUM;
+    size_t i = st.st_mtime;
+    struct mbt_be_node *node = mbt_be_num_init(i);
 
     struct mbt_be_pair *pair = transform_to_pair(node, "creation date");
+    return pair;
+}
+
+struct mbt_be_pair *get_announce(void)
+{
+    struct mbt_str announce;
+    if (!mbt_str_ctor(&announce, 64))
+    {
+        errx(1, "get announce : cannot ctor");
+        return NULL;
+    }
+    mbt_str_pushcstr(&announce,
+                     "http://torrent.pie.cri.epita.fr:8000/announce");
+    struct mbt_be_node *node = mbt_be_str_init(MBT_CVIEW_OF(announce));
+
+    struct mbt_be_pair *pair = transform_to_pair(node, "announce");
+
+    mbt_str_dtor(&announce);
     return pair;
 }
 
@@ -83,40 +88,54 @@ struct mbt_be_pair *get_user(const char *path)
     {
         return NULL;
     }
-    struct mbt_str *user = mbt_str_init(64);
-    if (!mbt_str_ctor(user, 64))
+    struct mbt_str user;
+    if (!mbt_str_ctor(&user, 64))
     {
-        mbt_str_free(user);
+        mbt_str_free(&user);
         return NULL;
     }
-    if (!mbt_str_pushcstr(user, pw->pw_name))
+    if (!mbt_str_pushcstr(&user, pw->pw_name))
     {
-        mbt_str_free(user);
+        mbt_str_free(&user);
         return NULL;
     }
-    struct mbt_cview user_cv = MBT_CVIEW_OF(*user);
+    struct mbt_cview user_cv = MBT_CVIEW_OF(user);
     struct mbt_be_node *node = mbt_be_str_init(user_cv);
 
     struct mbt_be_pair *pair = transform_to_pair(node, "created by");
+    mbt_str_dtor(&user);
     return pair;
+}
+
+void print_pair(struct mbt_be_pair *pair)
+{
+    printf("key -> %s\n", pair->key.data);
+    printf("size -> %li\n", pair->key.size);
+    if (pair->val->type == MBT_BE_STR)
+    {
+        printf("val -> %s\n", pair->val->v.str.data);
+    }
 }
 
 bool mbt_be_make_torrent_file(const char *path)
 {
-    struct mbt_str *data = mbt_str_init(64);
-    if (!mbt_str_ctor(data, 64))
+    struct mbt_str data;
+    if (!mbt_str_ctor(&data, 64))
     {
         errx(1, "make torrent file : cannot init data");
         return false;
     }
-    if (!mbt_str_read_file(path, data))
+    if (!mbt_str_read_file(path, &data))
     {
         errx(1, "make torrent file : cannot read file %s\n", path);
         return false;
     }
 
-    struct mbt_be_pair **d = calloc(1 + 1, sizeof(struct mbt_be_pair));
-    d[0] = get_user(path);
+    struct mbt_be_pair **d = calloc(3 + 1, sizeof(struct mbt_be_pair));
+    d[0] = get_announce();
+    d[1] = get_user(path);
+    d[2] = get_creation_date(path);
+    d[3] = NULL;
 
     struct mbt_be_node *node = mbt_be_dict_init(d);
 
@@ -128,9 +147,20 @@ bool mbt_be_make_torrent_file(const char *path)
 
     struct mbt_str buffer = mbt_be_encode(node);
     FILE *fptr;
-    fptr = fopen("path", "w");
+    struct mbt_str path_mbt;
+    if (!mbt_str_ctor(&path_mbt, 10))
+    {
+        errx(1, "cant path mbt form make torrent");
+        return false;
+    }
+    mbt_str_pushcstr(&path_mbt, path);
+    mbt_str_pushcstr(&path_mbt, ".torrent");
+    fptr = fopen(path_mbt.data, "w");
     fputs(buffer.data, fptr);
-    mbt_be_free(node);
+    fclose(fptr);
 
+    mbt_str_dtor(&data);
+    mbt_be_free(node);
+    mbt_str_dtor(&buffer);
     return true;
 }

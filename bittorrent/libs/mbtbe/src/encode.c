@@ -4,6 +4,8 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+#include "mbt/utils/str.h"
+
 static inline bool mbt_be_encode_rec(struct mbt_be_node *bn,
                                      struct mbt_str *str);
 
@@ -12,7 +14,9 @@ struct mbt_str mbt_be_encode(struct mbt_be_node *node)
     struct mbt_str str;
     mbt_str_ctor(&str, 0);
     if (!mbt_be_encode_rec(node, &str))
+    {
         mbt_str_dtor(&str);
+    }
     return str;
 }
 

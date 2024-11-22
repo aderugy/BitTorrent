@@ -1,6 +1,7 @@
 #include <mbt/utils/file.h>
 
 #include "mbt/utils/str.h"
+#include "stdio.h"
 
 bool mbt_str_read_file(const char *path, struct mbt_str *str)
 {
@@ -14,5 +15,6 @@ bool mbt_str_read_file(const char *path, struct mbt_str *str)
     {
         mbt_str_pushcstr(str, line);
     }
+    fclose(file);
     return true;
 }

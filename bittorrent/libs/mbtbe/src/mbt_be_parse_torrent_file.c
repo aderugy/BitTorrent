@@ -1,6 +1,6 @@
 #include <mbt/be/bencode.h>
+#include <mbt/be/types_mbtbe.h>
 #include <mbt/utils/file.h>
-#include <mbt/be/types.h>
 #include <mbt/utils/str.h>
 #include <mbt/utils/view.h>
 #include <stddef.h>
@@ -8,6 +8,7 @@
 
 #include "err.h"
 #include "mbt/be/torrent.h"
+#include "stdio.h"
 
 bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
                   size_t index)
@@ -63,12 +64,12 @@ bool mbt_be_parse_torrent_file(const char *path, struct mbt_torrent *torrent)
 
     if (!mbt_str_ctor(data, 64))
     {
-        errx(1, "mbt be parse torrent file : cannot init data\n");
+        errx(1, "mbt be parse torrent file : cannot init data");
         return false;
     }
     if (!mbt_str_read_file(path, data))
     {
-        errx(1, "mbt be parse torrent file : cannot read the file\n");
+        errx(1, "mbt be parse torrent file : cannot read the file");
         return false;
     }
 
