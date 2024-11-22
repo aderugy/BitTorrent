@@ -7,7 +7,6 @@
 
 // mbtnet
 #include <mbt/net/context.h>
-#include <mbt/net/peer_handler.h>
 #include <mbt/net/tracker.h>
 
 void mbt_leech(struct mbt_net_context *ctx);

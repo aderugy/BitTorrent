@@ -27,6 +27,4 @@ bool mbt_str_pushc(struct mbt_str *str, char c) MBT_NONNULL(1);
 bool mbt_str_pushcstr(struct mbt_str *str, const char *cstr) MBT_NONNULL(1);
 bool mbt_str_pushcv(struct mbt_str *str, struct mbt_cview view) MBT_NONNULL(1);
 
-bool mbt_str_read_file(const char *path, struct mbt_str *str);
-
 #endif /* !MBT_UTILS_STR_H */
