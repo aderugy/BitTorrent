@@ -1,4 +1,3 @@
-
 project(
   'mbt', # project name
   'c', # project language
