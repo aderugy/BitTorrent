@@ -8,6 +8,8 @@
 #include <sys/types.h>
 
 #include "mbt/be/bencode.h"
+#include "stdio.h"
+#include "unistd.h"
 
 struct mbt_be_pair *transform_to_pair(struct mbt_be_node *node, char *value)
 {
@@ -108,7 +110,7 @@ bool mbt_be_make_torrent_file(const char *path)
     }
     if (!mbt_str_read_file(path, data))
     {
-        errx(1, "make torrent file : cannot read file");
+        errx(1, "make torrent file : cannot read file %s\n", path);
         return false;
     }
 
@@ -123,6 +125,10 @@ bool mbt_be_make_torrent_file(const char *path)
         return false;
     }
 
+    struct mbt_str buffer = mbt_be_encode(node);
+    FILE *fptr;
+    fptr = fopen("path", "w");
+    fputs(buffer.data, fptr);
     mbt_be_free(node);
 
     return true;

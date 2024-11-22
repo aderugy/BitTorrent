@@ -9,9 +9,8 @@ bool mbt_str_read_file(const char *path, struct mbt_str *str)
     {
         return false;
     }
-    char *line = NULL;
-    size_t len = 0;
-    while (getline(&line, &len, file) != -1)
+    char line[100];
+    while (fgets(line, 100, file))
     {
         mbt_str_pushcstr(str, line);
     }

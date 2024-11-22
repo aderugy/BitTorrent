@@ -16,8 +16,8 @@ void mbt_torrent_free(struct mbt_torrent *torrent)
 
     if (torrent->info)
     {
-            mbt_str_free(&torrent->info->name);
-            mbt_str_free(&torrent->info->pieces);
+        mbt_str_free(&torrent->info->name);
+        mbt_str_free(&torrent->info->pieces);
     }
     free(torrent->info);
     free(torrent);

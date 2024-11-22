@@ -2,8 +2,8 @@
 #define TYPES_H
 
 #include <ctype.h>
-#include <stdlib.h>
 #include <mbt/utils/str.h>
+#include <stdlib.h>
 struct mbt_torrent_file
 {
     struct mbt_str *announce;
