@@ -1,3 +1,2 @@
-torrents
-build
+*.torrent
 .cache

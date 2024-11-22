@@ -22,7 +22,7 @@ enum tracker_event
 
 struct mbt_net_context
 {
-    struct mbt_torrent *torrent;
+    char *announce;
 
     char *ip;
     char *port;

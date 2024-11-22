@@ -1,3 +1,4 @@
+#include <arpa/inet.h>
 #include <err.h>
 #include <mbt/be/torrent.h>
 #include <mbt/net/context.h>
@@ -11,10 +12,22 @@ int main(void)
 
     printf("Announce: %s\n", torrent->announce->data);
     printf("info->piece_length: %zu\n", torrent->info->piece_length);
-    printf("info->pieces: %s\n", torrent->info->pieces.data);
+
+    printf("info->pieces: ");
+    struct mbt_str pieces = torrent->info->pieces;
+    for (size_t i = 0; i < pieces.size; i++)
+    {
+        unsigned char c = pieces.data[i];
+        printf("%02X", c);
+    }
+    printf("\n");
+
     printf("info->name: %s\n", torrent->info->name.data);
     printf("info->length: %zu\n", torrent->info->length);
-    printf("info->sha1: %s\n", torrent->info->sha1.data);
+
+    struct in_addr ip = { 0 };
+    struct mbt_net_context *ctx = mbt_net_context_init(torrent, ip, 8000);
+    mbt_net_context_peers(ctx);
 
     errx(1, "carre");
 }

@@ -93,7 +93,7 @@ static char *get_tracker_url(CURL *curl, struct mbt_net_context *ctx)
     params = add_param(curl, params, "info_hash", ctx->info_hash, false);
 
     char *url; // Full URL
-    asprintf(&url, "%s%s", ctx->torrent->announce->data, params);
+    asprintf(&url, "%s%s", ctx->announce, params);
 
     free(params);
     return url;

@@ -1,12 +1,13 @@
 #include <arpa/inet.h>
 #include <err.h>
 #include <mbt/be/torrent.h>
+#include <mbt/be/torrent_getters.h>
 #include <mbt/net/net_types.h>
 #include <stdlib.h>
+#include <string.h>
 
-struct mbt_net_context *
-mbt_net_context_init(__attribute((unused)) struct mbt_torrent *t,
-                     struct in_addr ip, uint16_t port)
+struct mbt_net_context *mbt_net_context_init(struct mbt_torrent *t,
+                                             struct in_addr ip, uint16_t port)
 {
     struct mbt_net_context *ctx = calloc(1, sizeof(struct mbt_net_context));
     if (!ctx)
@@ -20,9 +21,13 @@ mbt_net_context_init(__attribute((unused)) struct mbt_torrent *t,
     char *port_str;
     asprintf(&port_str, "%d", port);
 
-    ctx->torrent = t;
     ctx->ip = ip_buf;
     ctx->port = port_str;
+
+    ctx->peer_id = "aaaaaaaaaaaaaaaaaaaa";
+    ctx->announce = strdup(mbt_torrent_announce(t).data);
+    ctx->info_hash = strdup(mbt_torrent_pieces(t).data);
+    ctx->event = TRACKER_STARTED;
 
     return ctx;
 }
@@ -34,14 +39,10 @@ void mbt_net_context_free(struct mbt_net_context *ctx)
         return;
     }
 
-    if (ctx->ip)
-    {
-        free(ctx->ip);
-    }
-    if (ctx->port)
-    {
-        free(ctx->port);
-    }
+    free(ctx->ip);
+    free(ctx->port);
+    free(ctx->info_hash);
+    free(ctx->announce);
 
     free(ctx);
 }
