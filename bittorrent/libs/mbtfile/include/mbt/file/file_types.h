@@ -1,7 +1,7 @@
 #ifndef FILE_TYPES_H
 #define FILE_TYPES_H
 
-#include <mbt/be/types.h>
+#include <mbt/be/types_mbtbe.h>
 #include <mbt/file/file_handler.h>
 
 struct mbt_file_handler

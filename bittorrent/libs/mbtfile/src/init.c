@@ -1,4 +1,3 @@
-#include <mbt/be/types.h>
 #include <mbt/file/file_types.h>
 #include <stdlib.h>
 

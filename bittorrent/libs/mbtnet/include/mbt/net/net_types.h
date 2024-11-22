@@ -3,7 +3,7 @@
 
 #include <arpa/inet.h>
 #include <mbt/be/torrent.h>
-#include <mbt/be/types.h>
+#include <mbt/be/types_mbtbe.h>
 #include <mbt/net/context.h>
 #include <mbt/net/leeching.h>
 #include <mbt/net/peer.h>
