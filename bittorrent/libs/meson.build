@@ -8,10 +8,11 @@ project(
     'c_std=c99', # -std=c99
     'warning_level=2', # -Wall -Wextra
     'werror=true', # -Werror
-    'debug=false',
-    'buildtype=plain',
+    'debug=true',
+    'buildtype=debug',
   ],
 )
 
 subdir('mbtutils')
 subdir('mbtbe')
+subdir('mbtnet')
