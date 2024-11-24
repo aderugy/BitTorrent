@@ -19,18 +19,16 @@ struct mbt_torrent *mbt_torrent_init(void)
         free(torrent);
         return NULL;
     }
-    struct mbt_str announce;
-    if (!mbt_str_ctor(&announce, 64))
+    torrent->announce = calloc(1, sizeof(struct mbt_str));
+    if (!mbt_str_ctor(torrent->announce, 64))
     {
         errx(1, "failed to load announce (torrent init)");
     }
-    torrent->announce = &announce;
 
-    struct mbt_str created_by;
-    if (!mbt_str_ctor(&created_by, 64))
+    torrent->created_by = calloc(1, sizeof(struct mbt_str));
+    if (!mbt_str_ctor(torrent->created_by, 64))
     {
         errx(1, "failed to load created_by (torrent init)");
     }
-    torrent->created_by = &created_by;
     return torrent;
 }

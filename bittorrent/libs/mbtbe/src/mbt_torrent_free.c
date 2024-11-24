@@ -9,5 +9,13 @@ void mbt_torrent_free(struct mbt_torrent *torrent)
     {
         free(torrent->info);
     }
+    if (torrent->announce)
+    {
+        mbt_str_free(torrent->announce);
+    }
+    if (torrent->created_by) {
+        mbt_str_free(torrent->created_by);
+    
+    }
     free(torrent);
 }

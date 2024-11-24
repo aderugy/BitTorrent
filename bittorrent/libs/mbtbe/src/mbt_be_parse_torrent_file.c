@@ -15,6 +15,7 @@ bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
 {
     struct mbt_cview key = MBT_CVIEW_OF(node->v.dict[index]->key);
     struct mbt_be_node *val = node->v.dict[index]->val;
+    
     if (strcmp(key.data, "announce") == 0)
     {
         mbt_str_pushcstr(torrent->announce, val->v.str.data);

@@ -162,5 +162,6 @@ bool mbt_be_make_torrent_file(const char *path)
     mbt_str_dtor(&data);
     mbt_be_free(node);
     mbt_str_dtor(&buffer);
+    mbt_str_dtor(&path_mbt);
     return true;
 }
