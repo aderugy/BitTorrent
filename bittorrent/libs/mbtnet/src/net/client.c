@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <err.h>
 #include <mbt/net/msg.h>
 #include <mbt/net/net.h>
@@ -8,6 +9,33 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+void mbt_net_clients_print(struct mbt_net_client *clients)
+{
+    if (!clients)
+    {
+        return;
+    }
+
+    printf("CLIENT %hhi (%s)\n", clients->fd,
+           clients->handshaked ? "READY" : "PENDING");
+    printf("-- START BUFFER (%zu) --\n", clients->read);
+    for (size_t i = 0; i < clients->read; i++)
+    {
+        if (isprint(clients->buffer[i]))
+        {
+            printf("%c", clients->buffer[i]);
+        }
+        else
+        {
+            unsigned char c = clients->buffer[i];
+            printf(" 0x%02X ", c);
+        }
+    }
+    printf("\n\n");
+
+    mbt_net_clients_print(clients->next);
+}
 
 bool mbt_net_clients_accept(struct mbt_net_server *server,
                             struct mbt_net_client **clients)
@@ -55,6 +83,7 @@ bool mbt_net_clients_accept(struct mbt_net_server *server,
     next->next = *clients;
     *clients = next;
 
+    printf("Client accepted\n");
     return true;
 }
 

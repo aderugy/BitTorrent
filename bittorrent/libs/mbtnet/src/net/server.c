@@ -83,6 +83,7 @@ static int prepare_socket(const char *ip, const char *port)
         errx(1, "listen");
     }
 
+    printf("Listening on %s:%s\n", ip, port);
     return s_fd;
 }
 
@@ -148,10 +149,12 @@ void mbt_net_server_process_event(struct mbt_net_server *server,
 
         if (client_fd == server->s_fd)
         {
+            printf("New client !\n");
             if (!mbt_net_clients_accept(server, clients))
             {
                 warnx("mbt_net_clients_accept: failed to accept client");
             }
+            mbt_net_clients_print(*clients);
             continue;
         }
         else
@@ -176,5 +179,7 @@ void mbt_net_server_process_event(struct mbt_net_server *server,
         {
             mbt_msg_process(server, client, buffer, r);
         }
+
+        mbt_net_clients_print(*clients);
     }
 }

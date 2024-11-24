@@ -17,8 +17,8 @@ struct mbt_net_context *mbt_net_context_init(struct mbt_torrent *t,
         errx(EXIT_FAILURE, "Allocation error");
     }
 
-    char *ip_buf = calloc(42 + 1, sizeof(char));
-    inet_ntop(AF_INET, &ip, ip_buf, 42);
+    char *ip_buf = calloc(255 + 1, sizeof(char));
+    inet_ntop(AF_INET, &ip, ip_buf, 255);
 
     char *port_str;
     asprintf(&port_str, "%d", port);

@@ -28,6 +28,7 @@ struct mbt_net_client
     struct mbt_net_client *next;
 };
 
+void mbt_net_clients_print(struct mbt_net_client *clients);
 bool mbt_net_clients_accept(struct mbt_net_server *server,
                             struct mbt_net_client **clients) MBT_NONNULL(1, 2);
 

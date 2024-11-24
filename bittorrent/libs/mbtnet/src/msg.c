@@ -90,6 +90,8 @@ bool mbt_msg_process(__attribute((unused)) struct mbt_net_server *server,
                      struct mbt_net_client *client,
                      char buffer[MBT_NET_BUFFER_SIZE], int read)
 {
+    printf("Received message (%hhi bytes)\n", read);
+
     if (!client->buffer)
     {
         client->buffer = xmalloc(read * sizeof(char));
@@ -111,6 +113,7 @@ bool mbt_msg_process(__attribute((unused)) struct mbt_net_server *server,
             struct mbt_msg_handshake *hs = v_buffer;
             if (!mbt_msg_verify_handshake(server->ctx, *hs))
             {
+                printf("Handshake failed\n");
                 return false;
             }
 
