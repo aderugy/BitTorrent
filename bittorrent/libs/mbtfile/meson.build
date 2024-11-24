@@ -8,6 +8,11 @@ mbtfile = shared_library(
   install : true,
 )
 
+mbtfile_dep = declare_dependency (
+  include_directories : mbtfile_inc,
+  link_with : mbtfile
+)
+
 test_exe = executable(
   'file_test',
   sources : ['tests/main.c'],

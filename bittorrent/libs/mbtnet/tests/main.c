@@ -2,6 +2,8 @@
 #include <err.h>
 #include <mbt/be/torrent.h>
 #include <mbt/net/context.h>
+#include <mbt/net/msg.h>
+#include <mbt/net/net.h>
 #include <mbt/net/net_types.h>
 #include <mbt/net/peer.h>
 
@@ -28,6 +30,14 @@ int main(void)
     struct in_addr ip = { 0 };
     struct mbt_net_context *ctx = mbt_net_context_init(torrent, ip, 8000);
     mbt_net_context_peers(ctx);
+
+    struct mbt_net_client *clients = NULL;
+    struct mbt_net_server *server = mbt_net_server_init(ctx);
+
+    while (42)
+    {
+        mbt_net_server_process_event(server, &clients);
+    }
 
     errx(1, "carre");
 }

@@ -9,10 +9,11 @@ project(
     'werror=true', # -Werror
     'debug=true',
     'buildtype=debug',
+    'b_sanitize=address,undefined',
   ],
 )
 
 subdir('mbtutils')
 subdir('mbtbe')
-subdir('mbtnet')
 subdir('mbtfile')
+subdir('mbtnet')
