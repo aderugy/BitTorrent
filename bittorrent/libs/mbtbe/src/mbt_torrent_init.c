@@ -6,6 +6,33 @@
 #include "err.h"
 #include "mbt/utils/str.h"
 
+bool allocate_info(struct info *info)
+{
+    if (!info)
+    {
+        return false;
+    }
+
+    info->pieces = calloc(1, sizeof(struct mbt_str));
+    if (!mbt_str_ctor(info->pieces, 64))
+    {
+        errx(1, "allocate_info -> failed to allocate pieces");
+    }
+
+    info->name = calloc(1, sizeof(struct mbt_str));
+    if (!mbt_str_ctor(info->name, 64))
+    {
+        errx(1, "allocate_info -> failed to allocate name");
+    }
+
+    info->info_string = calloc(1, sizeof(struct mbt_str));
+    if (!mbt_str_ctor(info->info_string, 64)) {
+        errx(1, "allocate_info -> failed to allocate info string");
+    }
+
+    return true;
+}
+
 struct mbt_torrent *mbt_torrent_init(void)
 {
     struct mbt_torrent *torrent = calloc(1, sizeof(struct mbt_torrent));
@@ -14,11 +41,12 @@ struct mbt_torrent *mbt_torrent_init(void)
         return NULL;
     }
     torrent->info = calloc(1, sizeof(struct info));
-    if (torrent->info == NULL)
+    if (!allocate_info(torrent->info))
     {
         free(torrent);
         return NULL;
     }
+
     torrent->announce = calloc(1, sizeof(struct mbt_str));
     if (!mbt_str_ctor(torrent->announce, 64))
     {

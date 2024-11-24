@@ -22,11 +22,12 @@ struct mbt_torrent
 struct info
 {
     size_t piece_length;
-    struct mbt_str pieces;
-    struct mbt_str name;
+    struct mbt_str *pieces;
+    struct mbt_str *name;
     size_t length;
-    struct mbt_str sha1;
+    struct mbt_str *sha1;
     struct mbt_torrent_file **files;
+    struct mbt_str *info_string;
 };
 
 #endif // !TYPES_MBTBE_H

@@ -8,12 +8,17 @@
 void print_torrent(struct mbt_torrent *torrent)
 {
     printf("created by -> %s\n", torrent->created_by->data);
+    printf("announce -> %s\n", torrent->announce->data);
+    printf("creation date -> %li\n", torrent->creation_date);
+    printf("info ->\n");
+    printf("--pieces -> %s\n", torrent->info->pieces->data);
+    printf("--info string -> %s\n", torrent->info->info_string->data);
 }
 
 void test_parse(void)
 {
     struct mbt_torrent *torrent = mbt_torrent_init();
-    mbt_be_parse_torrent_file("./test.torrent", torrent);
+    mbt_be_parse_torrent_file("torrents/bonapart.png.torrent", torrent);
     print_torrent(torrent);
     mbt_torrent_free(torrent);
 }

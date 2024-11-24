@@ -15,7 +15,7 @@ bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
 {
     struct mbt_cview key = MBT_CVIEW_OF(node->v.dict[index]->key);
     struct mbt_be_node *val = node->v.dict[index]->val;
-    
+
     if (strcmp(key.data, "announce") == 0)
     {
         mbt_str_pushcstr(torrent->announce, val->v.str.data);
@@ -36,7 +36,7 @@ bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
             struct mbt_be_node *nval = val->v.dict[i]->val;
             if (strcmp(key.data, "pieces") == 0)
             {
-                torrent->info->pieces = nval->v.str;
+                mbt_str_pushcstr(torrent->info->pieces, nval->v.str.data);
             }
             else if (strcmp(key.data, "piece length") == 0)
             {
@@ -44,7 +44,7 @@ bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
             }
             else if (strcmp(key.data, "name") == 0)
             {
-                torrent->info->name = nval->v.str;
+                mbt_str_pushcstr(torrent->info->name, nval->v.str.data);
             }
             else if (strcmp(key.data, "length") == 0)
             {
@@ -55,6 +55,9 @@ bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
                 errx(1, "Unknown key: %s", key.data);
             }
         }
+        struct mbt_str node_string = mbt_be_encode(val);
+        mbt_str_pushcstr(torrent->info->info_string, node_string.data);
+        mbt_str_dtor(&node_string);
     }
     else
     {

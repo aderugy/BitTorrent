@@ -3,19 +3,35 @@
 #include <mbt/utils/str.h>
 #include <stdlib.h>
 
+void delocate_info(struct info *info)
+{
+    if (info->info_string) {
+    mbt_str_free(info->info_string);
+    }
+    if (info->name)
+    {
+        mbt_str_free(info->name);
+    }
+    if (info->pieces)
+    {
+        mbt_str_free(info->pieces);
+    }
+}
+
 void mbt_torrent_free(struct mbt_torrent *torrent)
 {
     if (torrent->info)
     {
+        delocate_info(torrent->info);
         free(torrent->info);
     }
     if (torrent->announce)
     {
         mbt_str_free(torrent->announce);
     }
-    if (torrent->created_by) {
+    if (torrent->created_by)
+    {
         mbt_str_free(torrent->created_by);
-    
     }
     free(torrent);
 }

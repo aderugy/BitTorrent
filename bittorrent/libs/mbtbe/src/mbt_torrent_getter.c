@@ -37,12 +37,12 @@ size_t mbt_torrent_piece_length(const struct mbt_torrent *torrent)
 
 struct mbt_cview mbt_torrent_name(const struct mbt_torrent *torrent)
 {
-    return MBT_CVIEW_OF(torrent->info->name);
+    return MBT_CVIEW_OF(*torrent->info->name);
 }
 
 struct mbt_cview mbt_torrent_pieces(const struct mbt_torrent *torrent)
 {
-    return MBT_CVIEW_OF(torrent->info->pieces);
+    return MBT_CVIEW_OF(*torrent->info->pieces);
 }
 
 size_t mbt_torrent_length(const struct mbt_torrent *torrent)
