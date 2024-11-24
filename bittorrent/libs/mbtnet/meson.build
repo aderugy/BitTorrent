@@ -4,7 +4,7 @@ curl_dep = dependency('libcurl')
 
 mbtnet = shared_library(
   'mbtnet',
-  sources : [ 'src/init.c', 'src/fetch.c' ],
+  sources : [ 'src/peer_addr.c', 'src/alloc.c', 'src/peers.c', 'src/tracker.c', 'src/leech.c' ],
   include_directories : mbtnet_inc,
   dependencies : [ mbtutils_dep, mbtbe_dep, curl_dep ],
   install : true,

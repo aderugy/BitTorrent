@@ -12,6 +12,8 @@
 
 #include "bits/stdint-uintn.h"
 
+#define PEER_ID_LENGTH 20
+
 enum tracker_event
 {
     TRACKER_EMPTY = 0,
@@ -43,5 +45,7 @@ struct mbt_peer
     struct mbt_str *ip;
     struct mbt_str *port;
 };
+
+void mbt_peer_free(struct mbt_peer *peer);
 
 #endif // !NET_TYPES_H
