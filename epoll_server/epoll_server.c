@@ -66,7 +66,7 @@ int prepare_socket(const char *ip, const char *port)
 {
     struct addrinfo hints;
     memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_UNSPEC;
+    hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
 
     struct addrinfo *addrinfo = NULL;
@@ -83,7 +83,7 @@ int prepare_socket(const char *ip, const char *port)
         errx(1, "prepare_socket");
     }
 
-    if (listen(s_fd, 10))
+    if (listen(s_fd, 50))
     {
         errx(1, "listen");
     }
@@ -213,9 +213,13 @@ static void read_events(int sfd, int epfd, struct connection_t **clients)
         char buffer[BUFFER_SIZE];
         int r = recv(client->client_socket, buffer, BUFFER_SIZE, 0);
 
-        if (r <= 0) // Case where connection ended
+        if (r == 0) // Case where connection ended
         {
             *clients = remove_client(*clients, client->client_socket);
+        }
+        else if (r == -1)
+        {
+            errx(EXIT_FAILURE, "SEGPIPE");
         }
         else // Process data
         {
