@@ -13,7 +13,18 @@ project(
   ],
 )
 
-subdir('mbtutils')
-subdir('mbtbe')
-subdir('mbtfile')
-subdir('mbtnet')
+subdir('libs/mbtutils')
+subdir('libs/mbtbe')
+subdir('libs/mbtfile')
+subdir('libs/mbtnet')
+
+src = ['src/main.c']
+
+mbt_inc = [ include_directories('src') ]
+executable(
+  'mbt', 
+  sources : src,
+  include_directories: mbt_inc,
+  dependencies : [ mbtutils_dep, mbtbe_dep, mbtfile_dep, mbtnet_dep ],
+  install: true,
+)

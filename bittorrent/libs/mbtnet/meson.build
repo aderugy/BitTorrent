@@ -10,6 +10,11 @@ mbtnet = shared_library(
   install : true,
 )
 
+mbtnet_dep = declare_dependency (
+  include_directories : mbtnet_inc,
+  link_with : mbtnet
+)
+
 test_exe = executable(
   'test_main',
   sources : ['tests/main.c'],
