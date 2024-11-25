@@ -1,6 +1,6 @@
 mbtutils_inc = [ include_directories('include/') ]
 
-openssl_dep = dependency('openssl')
+openssl_dep = dependency('openssl', method : 'cmake')
 
 mbtutils = shared_library(
   'mbtutils',
