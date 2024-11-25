@@ -13,7 +13,7 @@ mbtnet = shared_library(
 mbtnet_dep = declare_dependency (
   include_directories : mbtnet_inc,
   link_with : mbtnet,
-  dependencies : curl_dep,
+  dependencies : [ mbtutils_dep, mbtbe_dep, mbtfile_dep, curl_dep ],
 )
 
 test_exe = executable(
