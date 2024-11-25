@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "arpa/inet.h"
 #include "bits/stdint-uintn.h"
 
 struct curl_data
@@ -23,18 +24,15 @@ struct curl_data
 static size_t cb(void *data, size_t size, size_t nmemb, void *clientp)
 {
     size_t realsize = size * nmemb;
-    struct curl_data *mem = (struct curl_data *)clientp;
+    struct curl_data *mem = clientp;
 
-    char *ptr = realloc(mem->response, mem->size + realsize + 1);
-    if (!ptr)
-        return 0; /* out of curl_data! */
+    char *ptr = xrealloc(mem->response, mem->size + realsize + 1);
 
     mem->response = ptr;
     memcpy(&(mem->response[mem->size]), data, realsize);
     mem->size += realsize;
     mem->response[mem->size] = 0;
 
-    printf("%s\n", mem->response);
     return realsize;
 }
 
@@ -95,6 +93,7 @@ static char *get_tracker_url(CURL *curl, struct mbt_net_context *ctx)
         add_param(curl, params, "event", get_event_value(ctx->event), false);
     params = add_iparam(curl, params, "uploaded", ctx->uploaded, false);
     params = add_iparam(curl, params, "downloaded", ctx->downloaded, false);
+    params = add_iparam(curl, params, "no_peer_id", 1, false);
 
     params = add_param(curl, params, "ip", ctx->ip, false);
     params = add_param(curl, params, "port", ctx->port, false);
@@ -177,10 +176,14 @@ static struct mbt_peer **parse_peers_list(struct mbt_be_node **in)
     for (size_t i = 0; i < nb_peers; i++)
     {
         struct mbt_peer *peer;
-        if (in[i]->type != MBT_BE_DICT
-            || (peer = bdecode_peer(in[i]->v.dict)) == NULL)
+        if ((peer = bdecode_peer(in[i]->v.dict)) == NULL)
         {
-            // @TODO: Free memory
+            for (size_t j = 0; peers[j]; j++)
+            {
+                mbt_peer_free(peers[j]);
+            }
+            free(peers);
+
             warnx("parse_peers_list: failed to parse peer");
             return NULL;
         }
@@ -191,12 +194,48 @@ static struct mbt_peer **parse_peers_list(struct mbt_be_node **in)
     return peers;
 }
 
+static struct mbt_peer **parse_peers_list_compact(struct mbt_str str)
+{
+    /*
+     * Format (big endian):
+     * IPv4 32 bit     Port
+     * AA BB CC DD    FF FF (and so forth)
+     */
+    size_t nb_peers = str.size / 6;
+    struct mbt_peer **peers = xcalloc(nb_peers + 1, sizeof(struct mbt_peer *));
+
+    char *ptr = str.data;
+    for (size_t i = 0; i < nb_peers; i++)
+    {
+        struct mbt_peer *peer = xcalloc(1, sizeof(struct mbt_peer));
+        peer->id = mbt_str_init(PEER_ID_LENGTH);
+        peer->ip = mbt_str_init(255);
+        peer->port = mbt_str_init(10);
+
+        inet_ntop(AF_INET, ptr, peer->ip->data, PEER_ID_LENGTH);
+
+        char *port_str;
+        int port = (ptr[4] << 8) + ptr[5]; // Big Endian
+
+        asprintf(&port_str, "%d", port);
+        mbt_str_pushcstr(peer->port, port_str);
+        free(port_str);
+
+        print_peer(peer);
+        peers[i] = peer;
+
+        ptr += 6;
+    }
+
+    return peers;
+}
+
 static struct mbt_peer **parse_output(struct curl_data data)
 {
     struct mbt_cview buf = { .data = data.response, .size = data.size };
 
     /*
-     * TYPE
+     * TYPE (NOT COMPACT !!)
      * {
      *   "interval": number,
      *   "peers": [
@@ -228,13 +267,17 @@ static struct mbt_peer **parse_output(struct curl_data data)
         {
             interval = value->v.nb;
         }
-        else if (strcmp(key.data, "peers") == 0 && value->type == MBT_BE_LIST)
+        else if (strcmp(key.data, "peers") == 0
+                 && (value->type == MBT_BE_LIST || value->type == MBT_BE_STR))
         {
-            peers = parse_peers_list(value->v.list);
+            peers = value->type == MBT_BE_STR
+                ? parse_peers_list_compact(value->v.str)
+                : parse_peers_list(value->v.list);
         }
         else // Key incorrect or type is wrong
         {
-            if (strcmp(key.data, "failure") == 0 && value->type == MBT_BE_STR)
+            if (strcmp(key.data, "failure reason") == 0
+                && value->type == MBT_BE_STR)
             {
                 warnx("%s", value->v.str.data);
             }
@@ -242,23 +285,33 @@ static struct mbt_peer **parse_output(struct curl_data data)
             {
                 warnx("Invalid data (key: '%s')", key.data);
             }
-
-            return NULL;
         }
     }
 
     if (!peers || interval == 0)
     {
-        warnx("Incomplete data (peer: %p - interval: %zu)", peers, interval);
-        return NULL;
+        errx(EXIT_FAILURE, "Incomplete data (peer: %p - interval: %zu)", peers,
+             interval);
     }
 
+    mbt_be_free(root);
+    free(data.response);
     return peers;
+}
+
+void mbt_peer_addr(struct mbt_peer *peer, struct sockaddr_in *addr)
+{
+    addr->sin_family = AF_INET;
+    addr->sin_port = atoi(peer->port->data);
+
+    if (!inet_pton(AF_INET, peer->ip->data, &(addr->sin_addr)))
+    {
+        warnx("mbt_peer_addr: inet_pton");
+    }
 }
 
 struct mbt_peer **mbt_net_context_peers(struct mbt_net_context *ctx)
 {
-    // @TODO: handle compact format
     CURL *curl = curl_easy_init();
     if (!curl)
     {
@@ -275,16 +328,16 @@ struct mbt_peer **mbt_net_context_peers(struct mbt_net_context *ctx)
     // Curl Options
     curl_easy_setopt(curl, CURLOPT_URL, encoded_url);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cb);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &chunk);
 
+    printf("GET %s\n", encoded_url);
     CURLcode res = curl_easy_perform(curl); // Sending request
     curl_easy_cleanup(curl); // Cleaning
     free(encoded_url);
 
     if (res != CURLE_OK)
     {
-        warnx("Curl failed: %s", curl_easy_strerror(res));
-        return NULL;
+        errx(EXIT_FAILURE, "Curl failed: %s", curl_easy_strerror(res));
     }
 
     return parse_output(chunk);

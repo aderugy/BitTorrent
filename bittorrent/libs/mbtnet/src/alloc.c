@@ -7,7 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-// @TODO: track the file status
+#include "mbt/file/file_handler.h"
+#include "mbt/net/msg.h"
+
 struct mbt_net_context *mbt_net_context_init(struct mbt_torrent *t,
                                              struct in_addr ip, uint16_t port)
 {
@@ -27,9 +29,15 @@ struct mbt_net_context *mbt_net_context_init(struct mbt_torrent *t,
     ctx->port = port_str;
 
     ctx->peer_id = rand_str(PEER_ID_LENGTH);
+    memcpy(ctx->peer_id, MBT_PEER_ID_PREFIX, strlen(MBT_PEER_ID_PREFIX));
+
     ctx->announce = strdup(mbt_torrent_announce(t).data);
-    ctx->info_hash = strdup(mbt_torrent_pieces(t).data);
+    ctx->info_hash = strdup(t->info->hash);
     ctx->event = TRACKER_STARTED;
+
+    ctx->left = t->info->length;
+
+    ctx->fh = mbt_file_handler_init(t);
 
     return ctx;
 }
@@ -46,6 +54,7 @@ void mbt_net_context_free(struct mbt_net_context *ctx)
     free(ctx->info_hash);
     free(ctx->announce);
     free(ctx->peer_id);
+    mbt_file_handler_free(ctx->fh);
 
     free(ctx);
 }

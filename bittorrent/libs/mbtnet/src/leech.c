@@ -5,6 +5,11 @@
 
 void mbt_leech(struct mbt_net_context *ctx)
 {
+    if (ctx->left == 0)
+    {
+        return;
+    }
+
     struct mbt_net_server *server = mbt_net_server_init(ctx);
     struct mbt_net_client *clients = NULL;
 

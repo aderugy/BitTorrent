@@ -4,10 +4,12 @@
 #include <mbt/utils/str.h>
 #include <mbt/utils/view.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "err.h"
 #include "mbt/be/torrent.h"
+#include "mbt/utils/hash.h"
 #include "stdio.h"
 
 bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
@@ -30,6 +32,13 @@ bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
     }
     else if (strcmp(key.data, "info") == 0)
     {
+        struct mbt_str str = mbt_be_encode(val);
+        char *h = sha1(str.data, str.size);
+        memcpy(torrent->info->hash, h, 20);
+
+        mbt_str_dtor(&str);
+        free(h);
+
         for (size_t i = 0; val->v.dict[i]; i++)
         {
             struct mbt_cview key = MBT_CVIEW_OF(val->v.dict[i]->key);
