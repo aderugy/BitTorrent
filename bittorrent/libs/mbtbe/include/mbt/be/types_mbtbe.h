@@ -4,11 +4,9 @@
 #include <mbt/utils/str.h>
 struct mbt_torrent_file
 {
-    struct mbt_str *announce;
-    struct mbt_str *created_by;
-    size_t creation_date;
-    struct info *info;
-    struct mbt_str *path;
+    struct mbt_str **path;
+    size_t length;
+    size_t path_size;
 };
 
 struct mbt_torrent

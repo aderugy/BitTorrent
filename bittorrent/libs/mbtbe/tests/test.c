@@ -23,17 +23,14 @@ void test_parse(void)
     mbt_torrent_free(torrent);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
-    FILE *fptr = fopen("test", "w");
-    fputc('a', fptr);
-    fclose(fptr);
+    if (argc != 2)
+    {
+        return EXIT_FAILURE;
+    }
 
-    struct mbt_str a;
-    mbt_str_ctor(&a, 10);
-
-    mbt_be_make_torrent_file("./test");
-    mbt_str_dtor(&a);
+    mbt_be_make_torrent_file(argv[1]);
     test_parse();
     return EXIT_SUCCESS;
 }

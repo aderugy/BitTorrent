@@ -1,3 +1,4 @@
+#include <dirent.h>
 #include <err.h>
 #include <mbt/be/torrent.h>
 #include <mbt/be/types_mbtbe.h>
@@ -5,6 +6,7 @@
 #include <mbt/utils/hash.h>
 #include <mbt/utils/str.h>
 #include <pwd.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -12,7 +14,13 @@
 
 #include "mbt/be/bencode.h"
 #include "stdio.h"
+bool is_dir(const char *path)
+{
+    struct stat path_stat;
+    stat(path, &path_stat);
 
+    return S_ISDIR(path_stat.st_mode);
+}
 struct mbt_be_pair *transform_to_pair(struct mbt_be_node *node, char *value)
 {
     struct mbt_str key;
@@ -57,6 +65,22 @@ char *parse_path_get_file_name(const char *path)
     }
     return file_name + 1;
 }
+
+char *parse_path_get_dir_name(const char *path)
+{
+    char *copy = strdup(path);
+    if (copy[strlen(copy) - 1] == '/')
+    {
+        copy[strlen(copy) - 1] = 0;
+    }
+    char *dir_name = strrchr(copy, '/');
+    if (dir_name == NULL)
+    {
+        return NULL;
+    }
+    return dir_name + 1;
+}
+
 struct mbt_be_pair *get_name(const char *path)
 {
     struct mbt_str name;
@@ -65,7 +89,16 @@ struct mbt_be_pair *get_name(const char *path)
         mbt_str_free(&name);
         return NULL;
     }
-    if (!mbt_str_pushcstr(&name, parse_path_get_file_name(path)))
+    char *name_str;
+    if (is_dir(path))
+    {
+        name_str = parse_path_get_dir_name(path);
+    }
+    else
+    {
+        name_str = parse_path_get_file_name(path);
+    }
+    if (!mbt_str_pushcstr(&name, name_str))
     {
         mbt_str_free(&name);
         return NULL;
@@ -218,6 +251,90 @@ struct mbt_be_pair *get_user(const char *path)
     return pair;
 }
 
+struct mbt_be_pair **add_to_dict(struct mbt_be_pair **d,
+                                 struct mbt_be_pair *pair)
+{
+    struct mbt_be_pair **a =
+        realloc(d, sizeof(struct mbt_be_pair) * (sizeof(d) + 1));
+    size_t i = 0;
+    while (a[i] != NULL)
+    {
+        i++;
+    }
+    a[i] = pair;
+    a[i + 1] = NULL;
+    return a;
+}
+
+struct mbt_be_node **add_to_list(struct mbt_be_node **l,
+                                 struct mbt_be_node *node)
+{
+    struct mbt_be_node **a =
+        realloc(l, sizeof(struct mbt_be_node) * (sizeof(l) + 1));
+    size_t i = 0;
+    while (a[i] != NULL)
+    {
+        i++;
+    }
+    a[i] = node;
+    a[i + 1] = NULL;
+    return a;
+}
+
+struct mbt_be_node *dict_of_file_length_path(char *path)
+{
+    size_t length = get_file_size(path);
+    struct mbt_be_node *node_length = mbt_be_num_init(length);
+    struct mbt_str name;
+    if (!mbt_str_ctor(&name, 64))
+    {
+        mbt_str_free(&name);
+        return NULL;
+    }
+    if (!mbt_str_pushcstr(&name, parse_path_get_file_name(path)))
+    {
+        mbt_str_free(&name);
+        return NULL;
+    }
+    struct mbt_be_node *node_name = mbt_be_str_init(MBT_CVIEW_OF(name));
+    struct mbt_be_pair *pair_name = transform_to_pair(node_name, "name");
+    struct mbt_be_pair *pair_length = transform_to_pair(node_length, "length");
+    struct mbt_be_pair **d = calloc(2 + 1, sizeof(struct mbt_be_pair));
+    d[0] = pair_name;
+    d[1] = pair_length;
+    d[2] = NULL;
+    struct mbt_be_node *node = mbt_be_dict_init(d);
+    return node;
+}
+
+struct mbt_be_pair *list_of_files(const char *path)
+{
+    DIR *d = opendir(path);
+    if (d == NULL)
+    {
+        return NULL;
+    }
+    struct mbt_be_node **d_files = calloc(1, sizeof(struct mbt_be_pair));
+    struct dirent *dir;
+    while ((dir = readdir(d)) != NULL)
+    {
+        if (dir->d_type == DT_REG)
+        {
+            char *file_path = calloc(1, strlen(path) + strlen(dir->d_name) + 1);
+            strcat(file_path, path);
+            strcat(file_path, dir->d_name);
+            struct mbt_be_node *node = dict_of_file_length_path(file_path);
+            d_files = add_to_list(d_files, node);
+        }
+    }
+
+    struct mbt_be_node *list = mbt_be_list_init(d_files);
+
+    closedir(d);
+
+    return transform_to_pair(list, "files");
+}
+
 void print_pair(struct mbt_be_pair *pair)
 {
     printf("key -> %s\n", pair->key.data);
@@ -242,12 +359,16 @@ bool mbt_be_make_torrent_file(const char *path)
         return false;
     }
 
-    struct mbt_be_pair **d = calloc(3 + 1, sizeof(struct mbt_be_pair));
-    d[0] = get_announce();
-    d[1] = get_user(path);
-    d[2] = get_creation_date(path);
-    d[3] = create_info_dict(path);
-    d[4] = NULL;
+    struct mbt_be_pair **d = calloc(1, sizeof(struct mbt_be_pair));
+
+    d = add_to_dict(d, get_announce());
+    d = add_to_dict(d, get_user(path));
+    d = add_to_dict(d, get_creation_date(path));
+    d = add_to_dict(d, create_info_dict(path));
+    if (is_dir(path))
+    {
+        d = add_to_dict(d, list_of_files(path));
+    }
 
     struct mbt_be_node *node = mbt_be_dict_init(d);
 
@@ -265,7 +386,18 @@ bool mbt_be_make_torrent_file(const char *path)
         errx(1, "cant path mbt form make torrent");
         return false;
     }
-    mbt_str_pushcstr(&path_mbt, path);
+    if (is_dir(path))
+    {
+        char *dir_name = parse_path_get_dir_name(path);
+        printf("dir_name -> %s\n", dir_name);
+        mbt_str_pushcstr(&path_mbt, dir_name);
+    }
+    else
+    {
+        char *file_name = parse_path_get_file_name(path);
+        mbt_str_pushcstr(&path_mbt, file_name);
+    }
+
     mbt_str_pushcstr(&path_mbt, ".torrent");
     fptr = fopen(path_mbt.data, "w");
     fputs(buffer.data, fptr);
