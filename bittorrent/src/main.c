@@ -9,9 +9,15 @@
 #include "mbt/net/leeching.h"
 #include "mbt/net/net_types.h"
 #include "netinet/in.h"
+#include "string.h"
 
 int main(int argc, char *argv[])
 {
+    if (argc > 2
+        && (strcmp(argv[1], "-m") == 0 || strcmp(argv[1], "--mktorrent") == 0))
+    {
+        return mbt_be_make_torrent_file(argv[2]);
+    }
     if (argc != 2)
     {
         errx(EXIT_FAILURE, "main: args");
