@@ -10,6 +10,7 @@ mbtfile = shared_library(
 
 mbtfile_dep = declare_dependency (
   include_directories : mbtfile_inc,
+  dependencies : [ mbtutils_dep, mbtbe_dep ],
   link_with : mbtfile
 )
 

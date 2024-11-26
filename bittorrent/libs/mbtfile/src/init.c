@@ -17,7 +17,6 @@ struct mbt_file_handler *mbt_file_handler_init(struct mbt_torrent *torrent)
     fh->name = mbt_str_init(name.size);
     mbt_str_pushcv(fh->name, name);
 
-    fh->len_piece = mbt_torrent_piece_length(torrent);
     fh->nb_pieces = hash.size / 20;
 
     fh->pieces = xcalloc(fh->nb_pieces, sizeof(struct mbt_piece *));

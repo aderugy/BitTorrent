@@ -9,17 +9,12 @@ int mbt_net_contact_tracker(struct mbt_net_context *ctx)
         return -1;
     }
 
-    struct mbt_peer **tmp = peers;
-
     size_t len = 0;
-    while (*peers)
+    for (; peers[len]; len++)
     {
-        mbt_peer_free(*peers);
-
-        len++;
-        (*peers)++;
+        mbt_peer_free(peers[len]);
     }
+    free(peers);
 
-    free(tmp);
     return len;
 }

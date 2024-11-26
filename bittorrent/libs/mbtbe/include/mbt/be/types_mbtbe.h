@@ -19,6 +19,8 @@ struct mbt_torrent
 
 struct info
 {
+    char hash[20];
+
     size_t piece_length;
     struct mbt_str *pieces;
     struct mbt_str *name;
@@ -27,5 +29,7 @@ struct info
     struct mbt_torrent_file **files;
     struct mbt_str *info_string;
 };
+
+void mbt_torrent_print(struct mbt_torrent *torrent);
 
 #endif // !TYPES_MBTBE_H

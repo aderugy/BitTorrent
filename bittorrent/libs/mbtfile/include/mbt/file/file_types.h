@@ -14,8 +14,6 @@ struct mbt_file_handler
     struct mbt_str *h;
     struct mbt_str *name;
 
-    size_t len_piece;
-
     size_t nb_pieces;
     struct mbt_piece **pieces;
 };

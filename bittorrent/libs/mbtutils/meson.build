@@ -12,5 +12,6 @@ mbtutils = shared_library(
 
 mbtutils_dep = declare_dependency(
   include_directories : mbtutils_inc,
+  dependencies: [ openssl_dep ],
   link_with : mbtutils,
 )

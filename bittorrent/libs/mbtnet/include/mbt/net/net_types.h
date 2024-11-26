@@ -11,6 +11,8 @@
 #include <mbt/utils/str.h>
 
 #include "bits/stdint-uintn.h"
+#include "mbt/file/file_types.h"
+#include "mbt/utils/utils.h"
 
 #define PEER_ID_LENGTH 20
 
@@ -37,6 +39,8 @@ struct mbt_net_context
 
     uint64_t left;
     enum tracker_event event;
+
+    struct mbt_file_handler *fh;
 };
 
 struct mbt_peer
@@ -46,6 +50,7 @@ struct mbt_peer
     struct mbt_str *port;
 };
 
+void mbt_net_context_print(struct mbt_net_context *ctx) MBT_NONNULL(1);
 void mbt_peer_free(struct mbt_peer *peer);
 
 #endif // !NET_TYPES_H

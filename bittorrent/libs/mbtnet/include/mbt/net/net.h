@@ -1,6 +1,7 @@
 #ifndef NET_H
 #define NET_H
 
+#include <mbt/file/file_types.h>
 #include <mbt/net/net_types.h>
 #include <mbt/utils/utils.h>
 #include <stdbool.h>
@@ -13,6 +14,7 @@ struct mbt_net_server
     int ep_fd;
     int s_fd;
     struct mbt_net_context *ctx;
+    struct mbt_file_handler *fh;
 };
 
 struct mbt_net_server *mbt_net_server_init(struct mbt_net_context *ctx);

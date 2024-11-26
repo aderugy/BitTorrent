@@ -7,13 +7,11 @@ size_t mbt_file_handler_get_total_size(
 {
     warnx("mbt_file_handler_get_total_size: undefined behavior for multiple "
           "files");
-    return fh->len_piece * fh->nb_pieces;
+    return MBT_PIECE_SIZE * fh->nb_pieces;
 }
 
 struct mbt_cview mbt_file_handler_get_name(struct mbt_file_handler *fh)
 {
-    warnx("mbt_file_handler_get_name: undefined behavior for multiple "
-          "files");
     return MBT_CVIEW_OF(*fh->name);
 }
 

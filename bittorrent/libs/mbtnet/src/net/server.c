@@ -9,6 +9,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "mbt/file/file_handler.h"
+#include "mbt/file/file_types.h"
+
 #define MAX_CONCURRENT_IO 4
 
 /**
