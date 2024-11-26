@@ -66,20 +66,35 @@ char *parse_path_get_file_name(const char *path)
     return file_name + 1;
 }
 
-char *parse_path_get_dir_name(const char *path)
+struct mbt_str *parse_path_get_dir_name(const char *path)
 {
-    char *copy = strdup(path);
-    if (copy[strlen(copy) - 1] == '/')
+    char *copy = calloc(strlen(path), sizeof(char));
+    for (size_t i = 0; *(path + i + 1); i++)
     {
-        copy[strlen(copy) - 1] = 0;
+        copy[i] = path[i];
     }
+
     char *dir_name = strrchr(copy, '/');
     if (dir_name == NULL)
     {
         return NULL;
     }
+    struct mbt_str *path_mbt = calloc(1, sizeof(struct mbt_str));
+    if (!mbt_str_ctor(path_mbt, 32))
+    {
+        errx(1, "parse path get dir name");
+    }
+    for (size_t h = 1; *(dir_name + h); h++)
+    {
+        if (!mbt_str_pushc(path_mbt, *(dir_name + h)))
+        {
+            errx(1, "pushc parse path get dir name");
+        }
+    }
 
-    return dir_name + 1;
+    free(copy);
+
+    return path_mbt;
 }
 
 struct mbt_be_pair *get_name(const char *path)
@@ -93,17 +108,27 @@ struct mbt_be_pair *get_name(const char *path)
     char *name_str;
     if (is_dir(path))
     {
-        name_str = parse_path_get_dir_name(path);
+        struct mbt_str *str = parse_path_get_dir_name(path);
+        name_str = str->data;
+        if (!mbt_str_pushcstr(&name, name_str))
+        {
+            mbt_str_free(&name);
+            return NULL;
+        }
+        mbt_str_dtor(str);
+        free(str);
     }
     else
     {
         name_str = parse_path_get_file_name(path);
+
+        if (!mbt_str_pushcstr(&name, name_str))
+        {
+            mbt_str_free(&name);
+            return NULL;
+        }
     }
-    if (!mbt_str_pushcstr(&name, name_str))
-    {
-        mbt_str_free(&name);
-        return NULL;
-    }
+
     struct mbt_be_node *node = mbt_be_str_init(MBT_CVIEW_OF(name));
     struct mbt_be_pair *pair = transform_to_pair(node, "name");
     mbt_str_dtor(&name);
@@ -298,6 +323,7 @@ struct mbt_be_node *dict_of_file_length_path(char *path)
         return NULL;
     }
     struct mbt_be_node *node_name = mbt_be_str_init(MBT_CVIEW_OF(name));
+    mbt_str_dtor(&name);
     struct mbt_be_pair *pair_name = transform_to_pair(node_name, "name");
     struct mbt_be_pair *pair_length = transform_to_pair(node_length, "length");
     struct mbt_be_pair **d = calloc(2 + 1, sizeof(struct mbt_be_pair));
@@ -325,6 +351,7 @@ struct mbt_be_pair *list_of_files(const char *path)
             strcat(file_path, path);
             strcat(file_path, dir->d_name);
             struct mbt_be_node *node = dict_of_file_length_path(file_path);
+            free(file_path);
             d_files = add_to_list(d_files, node);
         }
     }
@@ -389,8 +416,10 @@ bool mbt_be_make_torrent_file(const char *path)
     }
     if (is_dir(path))
     {
-        char *dir_name = parse_path_get_dir_name(path);
-        mbt_str_pushcstr(&path_mbt, dir_name);
+        struct mbt_str *dir_name = parse_path_get_dir_name(path);
+        mbt_str_pushcstr(&path_mbt, dir_name->data);
+        mbt_str_dtor(dir_name);
+        free(dir_name);
     }
     else
     {

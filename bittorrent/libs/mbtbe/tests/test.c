@@ -43,5 +43,8 @@ int main(int argc, char **argv)
 
     mbt_be_make_torrent_file(argv[1]);
     test_parse("torrents/bonapart.png.torrent");
+    test_parse("torrents/bass_boosted1.mp4.torrent");
+    test_parse("torrents/CongratulationsDir.torrent");
+    test_parse("torrents/docu1.mp4.torrent");
     return EXIT_SUCCESS;
 }
