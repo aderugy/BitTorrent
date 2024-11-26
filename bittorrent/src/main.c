@@ -1,5 +1,6 @@
 #include <err.h>
 #include <mbt/utils/str.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "arpa/inet.h"
@@ -11,11 +12,32 @@
 #include "netinet/in.h"
 #include "string.h"
 
+void verify_path(char **path)
+{
+    if (path == NULL)
+    {
+        errx(EXIT_FAILURE, "main: path");
+    }
+    if (*path[0] != '.')
+    {
+        char *new_path = calloc(strlen(*path) + 3, sizeof(char));
+        new_path[0] = '.';
+        new_path[1] = '/';
+        strcat(new_path, *path);
+        if (new_path == NULL)
+        {
+            errx(EXIT_FAILURE, "main: new_path");
+        }
+        *path = new_path;
+    }
+}
+
 int main(int argc, char *argv[])
 {
     if (argc > 2
         && (strcmp(argv[1], "-m") == 0 || strcmp(argv[1], "--mktorrent") == 0))
     {
+        verify_path(&argv[2]);
         return mbt_be_make_torrent_file(argv[2]);
     }
     if (argc != 2)
