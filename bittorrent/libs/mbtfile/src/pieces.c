@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "ctype.h"
 #include "mbt/file/file_handler.h"
 #include "mbt/file/piece.h"
 
@@ -90,9 +91,7 @@ bool mbt_compare_hashes(struct mbt_file_handler *fh, size_t piece_index,
     }
 
     struct mbt_piece *ref = fh->pieces[piece_index];
-
     char *rec_h = sha1(received_data, strlen(received_data));
-    warnx("warning: received_data might not be null byte terminated");
 
     int res = memcmp(rec_h, ref->h, MBT_H_LENGTH) == 0;
     free(rec_h);
@@ -115,18 +114,15 @@ void mbt_piece_block_set_received(struct mbt_file_handler *fh,
 
 size_t mbt_piece_get_nb_blocks(struct mbt_file_handler *fh, size_t piece_index)
 {
-    size_t n = 0;
-    bool *status = fh->pieces[piece_index]->status;
-
-    for (size_t i = 0; i < MBT_PIECE_NB_BLOCK; i++)
+    if (piece_index >= fh->nb_pieces)
     {
-        if (status[i])
-        {
-            n++;
-        }
+        errx(EXIT_FAILURE, "mbt_piece_get_nb_blocks: index out of bounds");
     }
 
-    return n;
+    struct mbt_piece *piece = fh->pieces[piece_index];
+
+    return piece->size / MBT_BLOCK_SIZE
+        + (piece->size % MBT_BLOCK_SIZE > 0 ? 1 : 0);
 }
 
 enum mbt_piece_status mbt_piece_check(struct mbt_file_handler *fh,
@@ -147,8 +143,7 @@ enum mbt_piece_status mbt_piece_check(struct mbt_file_handler *fh,
 
     // Compare hashes
     void *v_data = piece->data;
-    // @TODO: hash with msg length not piece length
-    char *cur_hash = sha1(v_data, 14);
+    char *cur_hash = sha1(v_data, piece->size);
 
     int res = memcmp(cur_hash, piece->h, MBT_H_LENGTH) == 0;
     free(cur_hash);
@@ -158,13 +153,29 @@ enum mbt_piece_status mbt_piece_check(struct mbt_file_handler *fh,
 
 bool mbt_piece_write(struct mbt_file_handler *fh, size_t piece_index)
 {
-    errx(EXIT_FAILURE, "mbt_piece_write: not implemented");
-
-    if (fh->nb_pieces + piece_index)
+    if (fh->nb_pieces <= piece_index)
     {
         return false;
     }
 
+    struct mbt_piece *piece = fh->pieces[piece_index];
+
+    void *vbuf = piece->data;
+    char *c = vbuf;
+    printf("PIECE WRITTEN:\n");
+    for (size_t i = 0; i < piece->size; i++)
+    {
+        if (isprint(c[i]))
+        {
+            printf("%c", c[i]);
+        }
+    }
+    printf("\n\n");
+
+    free(piece->data);
+    piece->data = NULL;
+
+    piece->completed = true;
     return true;
 }
 

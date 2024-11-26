@@ -28,6 +28,7 @@ int mbt_msg_send_handler_request(
     struct mbt_net_client *client)
 {
     printf("SENDING HANDLER REQUEST !\n");
+
     /*
      * 17 bytes message
      *  LENGTH (4)        TYPE (1)     Index (4)      Begin (4)   Length (4)
@@ -37,7 +38,11 @@ int mbt_msg_send_handler_request(
     memset(buf, 0, 17);
     buf[3] = 13;
     buf[4] = MBT_MAGIC_REQUEST;
-    buf[16] = 14;
+
+    struct mbt_net_request req = client->request;
+    memcpy(&(req.index), buf + 5, 4);
+    memcpy(&(req.index), buf + 9, 4);
+    memcpy(&(req.index), buf + 13, 4);
 
     for (size_t i = 0; i < 17; i++)
     {

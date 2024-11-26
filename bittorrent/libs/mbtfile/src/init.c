@@ -1,4 +1,5 @@
 #include <mbt/be/torrent_getters.h>
+#include <mbt/file/file_handler.h>
 #include <mbt/file/file_types.h>
 #include <mbt/utils/str.h>
 #include <mbt/utils/view.h>
@@ -26,6 +27,15 @@ struct mbt_file_handler *mbt_file_handler_init(struct mbt_torrent *torrent)
 
         piece->h = xcalloc(MBT_H_LENGTH + 1, sizeof(char));
         memcpy(piece->h, hash.data + (i * MBT_H_LENGTH), MBT_H_LENGTH);
+
+        if (i == fh->nb_pieces - 1)
+        {
+            piece->size = mbt_file_handler_get_total_size(fh) % MBT_PIECE_SIZE;
+        }
+        else
+        {
+            piece->size = MBT_PIECE_SIZE;
+        }
 
         fh->pieces[i] = piece;
     }

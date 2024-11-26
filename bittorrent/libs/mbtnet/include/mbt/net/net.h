@@ -57,6 +57,9 @@ struct mbt_net_client
 // SERVER FUNCTIONS
 struct addrinfo *mbt_getaddrinfo(char *ip, char *port);
 
+bool mbt_net_client_next_block(struct mbt_file_handler *fh,
+                               struct mbt_net_client *client) MBT_NONNULL(1, 2);
+
 struct mbt_net_server *mbt_net_server_init(struct mbt_net_context *ctx);
 void mbt_net_server_free(struct mbt_net_server *server);
 // SERVER FUNCTIONS

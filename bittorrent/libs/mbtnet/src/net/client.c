@@ -14,6 +14,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "mbt/file/file_handler.h"
+#include "mbt/file/file_types.h"
+#include "mbt/file/piece.h"
 #include "mbt/net/msg_handler.h"
 
 const char *mbt_client_state_name(enum mbt_client_state state)
@@ -67,6 +70,118 @@ int mbt_net_client_handshake(struct mbt_net_server *server,
 
     client->state = MBT_CLIENT_WAITING_HANDSHAKE;
     return MBT_HANDLER_SUCCESS;
+}
+
+/*
+ * Returns the number of clients downloading a piece
+ */
+static size_t mbt_net_clients_dl_piece(struct mbt_net_client **clients,
+                                       size_t piece_index)
+{
+    size_t n = 0;
+    struct mbt_net_client *current = *clients;
+
+    while (current)
+    {
+        if (current->request.index == piece_index)
+        {
+            n++;
+        }
+
+        current = current->next;
+    }
+
+    return n;
+}
+
+/*
+ * Finds the next piece with the less amount of clients
+ * Sets the clients request field to the right position to send request
+ * If no block is found, returns false
+ */
+bool mbt_net_client_next_piece(struct mbt_file_handler *fh,
+                               struct mbt_net_client **clients,
+                               struct mbt_net_client *client)
+{
+    size_t min_n = 0;
+    size_t min_idx = fh->nb_pieces;
+
+    size_t piece_index = client->request.index;
+    for (size_t i = (piece_index + 1) % fh->nb_pieces; i < fh->nb_pieces - 1;
+         i = (i + 1) % fh->nb_pieces)
+    {
+        struct mbt_piece *piece = fh->pieces[i];
+        if (piece->completed)
+        {
+            continue;
+        }
+
+        // Index of first block of piece of index i in the bitfield
+        size_t start_blk_idx = i * MBT_PIECE_NB_BLOCK;
+        // Same for end (excluded)
+        size_t end_blk_ixd = start_blk_idx + piece->nb_blocks;
+
+        // Current block index
+        // We are checking if there is a block that isnt downloaded
+        size_t bt_idx = start_blk_idx;
+        for (; bt_idx < end_blk_ixd; bt_idx++)
+        {
+            // We ensure that there is at least one available block
+            // And that the block has not been downloaded
+            if (client->bitfield[bt_idx]
+                && !mbt_piece_block_is_received(fh, i, bt_idx - start_blk_idx))
+            {
+                break;
+            }
+        }
+
+        // Number of clients working on this piece
+        size_t n = mbt_net_clients_dl_piece(clients, i);
+        if (bt_idx < end_blk_ixd && (min_idx == fh->nb_pieces || n < min_n))
+        {
+            min_n = n;
+            min_idx = i;
+
+            client->request.index = bt_idx;
+            client->request.begin = bt_idx - start_blk_idx;
+            client->request.length =
+                (piece->size - client->request.begin) % MBT_BLOCK_SIZE;
+        }
+
+        if (min_n == 0) // Won't find less than that
+        {
+            break;
+        }
+    }
+
+    return min_idx != fh->nb_pieces;
+}
+
+bool mbt_net_client_next_block(struct mbt_file_handler *fh,
+                               struct mbt_net_client *client)
+{
+    struct mbt_piece *piece = fh->pieces[client->request.index];
+    if (client->request.begin + MBT_BLOCK_SIZE >= piece->size)
+    {
+        return false;
+    }
+
+    client->request.begin += MBT_BLOCK_SIZE;
+    client->request.length =
+        (piece->size - client->request.begin) % MBT_BLOCK_SIZE;
+
+    if (piece->status[client->request.begin / MBT_BLOCK_SIZE])
+    {
+        return mbt_net_client_next_block(fh, client);
+    }
+
+    client->state = MBT_CLIENT_REQUESTING;
+    if (client->buffer)
+    {
+        free(client->buffer);
+        client->buffer = NULL;
+    }
+    return true;
 }
 
 bool mbt_net_client_check_connect(struct mbt_net_client *client)

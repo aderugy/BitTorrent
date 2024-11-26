@@ -29,7 +29,10 @@ struct mbt_block
 struct mbt_piece
 {
     char *h;
+    size_t size;
+    size_t nb_blocks;
 
+    bool completed;
     bool status[MBT_PIECE_NB_BLOCK];
     struct mbt_block *data;
 };
