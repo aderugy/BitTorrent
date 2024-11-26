@@ -2,11 +2,13 @@
 #define TYPES_MBTBE_H
 
 #include <mbt/utils/str.h>
+#include <stddef.h>
 struct mbt_torrent_file
 {
     struct mbt_str **path;
     size_t length;
     size_t path_size;
+    size_t start_index;
 };
 
 struct mbt_torrent
