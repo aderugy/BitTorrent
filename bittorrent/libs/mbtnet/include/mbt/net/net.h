@@ -33,7 +33,6 @@ struct mbt_net_request
 struct mbt_net_server
 {
     int ep_fd;
-    int s_fd;
 
     struct addrinfo *addr;
     struct mbt_net_context *ctx;
@@ -67,6 +66,10 @@ void mbt_net_server_free(struct mbt_net_server *server);
 // CLIENT FUNCTIONS
 int mbt_net_client_handshake(struct mbt_net_server *server,
                              struct mbt_net_client *client) MBT_NONNULL(1, 2);
+
+bool mbt_net_client_next_piece(struct mbt_file_handler *fh,
+                               struct mbt_net_client **clients,
+                               struct mbt_net_client *client);
 
 void mbt_net_clients_print(struct mbt_net_client *clients);
 

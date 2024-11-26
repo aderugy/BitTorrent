@@ -10,10 +10,12 @@ struct mbt_file_handler *mbt_file_handler_init(struct mbt_torrent *torrent)
 {
     struct mbt_file_handler *fh = xcalloc(1, sizeof(struct mbt_file_handler));
 
+    // Duplicate and copy
     struct mbt_cview hash = mbt_torrent_pieces(torrent);
     fh->h = mbt_str_init(hash.size);
     mbt_str_pushcv(fh->h, hash);
 
+    // Duplicate name and copy
     struct mbt_cview name = mbt_torrent_name(torrent);
     fh->name = mbt_str_init(name.size);
     mbt_str_pushcv(fh->name, name);
@@ -26,15 +28,25 @@ struct mbt_file_handler *mbt_file_handler_init(struct mbt_torrent *torrent)
         struct mbt_piece *piece = xcalloc(1, sizeof(struct mbt_piece));
 
         piece->h = xcalloc(MBT_H_LENGTH + 1, sizeof(char));
+
+        // Store hash in piece
         memcpy(piece->h, hash.data + (i * MBT_H_LENGTH), MBT_H_LENGTH);
 
-        if (i == fh->nb_pieces - 1)
+        if (i == fh->nb_pieces - 1) // Last piece can have smaller len
         {
-            piece->size = mbt_file_handler_get_total_size(fh) % MBT_PIECE_SIZE;
+            piece->size = torrent->info->length % MBT_PIECE_SIZE;
+            if (piece->size == 0)
+            {
+                piece->size = MBT_PIECE_SIZE;
+            }
+
+            piece->nb_blocks = piece->size / MBT_BLOCK_SIZE
+                + (piece->size % MBT_BLOCK_SIZE > 0);
         }
         else
         {
             piece->size = MBT_PIECE_SIZE;
+            piece->nb_blocks = MBT_PIECE_NB_BLOCK;
         }
 
         fh->pieces[i] = piece;

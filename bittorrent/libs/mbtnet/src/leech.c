@@ -43,7 +43,15 @@ void mbt_leech(struct mbt_net_context *ctx)
     for (size_t i = 0; peers[i]; i++)
     {
         struct mbt_peer *peer = peers[i];
-        mbt_net_peer_connect(server, &clients, peer);
+        printf("for loop: try\n");
+        if (mbt_net_peer_connect(server, &clients, peer))
+        {
+            printf("for loop: success\n");
+        }
+        else
+        {
+            printf("Floppaid\n");
+        }
     }
 
     for (size_t i = 0; peers[i]; i++)

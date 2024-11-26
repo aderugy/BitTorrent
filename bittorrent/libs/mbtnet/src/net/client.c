@@ -83,7 +83,9 @@ static size_t mbt_net_clients_dl_piece(struct mbt_net_client **clients,
 
     while (current)
     {
-        if (current->request.index == piece_index)
+        if ((current->state == MBT_CLIENT_REQUESTING
+             || current->state == MBT_CLIENT_DOWNLOADED)
+            && current->request.index == piece_index)
         {
             n++;
         }
@@ -103,18 +105,14 @@ bool mbt_net_client_next_piece(struct mbt_file_handler *fh,
                                struct mbt_net_client **clients,
                                struct mbt_net_client *client)
 {
-    size_t min_n = 0;
-    size_t min_idx = fh->nb_pieces;
-
-    size_t piece_index = client->request.index;
-    for (size_t i = (piece_index + 1) % fh->nb_pieces; i < fh->nb_pieces - 1;
-         i = (i + 1) % fh->nb_pieces)
+    for (size_t i = 0; i < fh->nb_pieces; i++)
     {
-        struct mbt_piece *piece = fh->pieces[i];
-        if (piece->completed)
+        if (fh->pieces[i]->completed)
         {
             continue;
         }
+
+        struct mbt_piece *piece = fh->pieces[i];
 
         // Index of first block of piece of index i in the bitfield
         size_t start_blk_idx = i * MBT_PIECE_NB_BLOCK;
@@ -137,24 +135,18 @@ bool mbt_net_client_next_piece(struct mbt_file_handler *fh,
 
         // Number of clients working on this piece
         size_t n = mbt_net_clients_dl_piece(clients, i);
-        if (bt_idx < end_blk_ixd && (min_idx == fh->nb_pieces || n < min_n))
+        if (bt_idx < end_blk_ixd && n == 0)
         {
-            min_n = n;
-            min_idx = i;
-
             client->request.index = bt_idx;
             client->request.begin = bt_idx - start_blk_idx;
             client->request.length =
                 (piece->size - client->request.begin) % MBT_BLOCK_SIZE;
-        }
 
-        if (min_n == 0) // Won't find less than that
-        {
-            break;
+            return true;
         }
     }
 
-    return min_idx != fh->nb_pieces;
+    return false;
 }
 
 bool mbt_net_client_next_block(struct mbt_file_handler *fh,
@@ -239,6 +231,7 @@ bool mbt_net_peer_connect(struct mbt_net_server *server,
     mbt_peer_init_addr(peer);
     if (!peer->addr)
     {
+        printf("Peer init ?\n");
         return false;
     }
 
@@ -252,6 +245,7 @@ bool mbt_net_peer_connect(struct mbt_net_server *server,
             socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
         if (c_fd < 0)
         {
+            printf("Continue ?\n");
             continue;
         }
 
@@ -260,11 +254,13 @@ bool mbt_net_peer_connect(struct mbt_net_server *server,
 
         enum mbt_client_state state = MBT_CLIENT_WAITING_CONNECTION;
 
+        printf("We are here\n");
         int cstatus =
             connect(c_fd, peer->addr->ai_addr, peer->addr->ai_addrlen);
 
         if (cstatus && errno != EINPROGRESS)
         {
+            warnx("connect: failed");
             return false;
         }
         else if (cstatus == 0)
@@ -274,6 +270,7 @@ bool mbt_net_peer_connect(struct mbt_net_server *server,
 
         if (!mbt_net_clients_add(server, clients, c_fd, state))
         {
+            warnx("mbt_net_clients_add: failed");
             close(c_fd);
             continue;
         }

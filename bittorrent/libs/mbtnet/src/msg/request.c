@@ -7,6 +7,17 @@
 #include <mbt/utils/xalloc.h>
 #include <string.h>
 
+static void putain_de_sa_race(uint32_t n, unsigned char *buf)
+{
+    void *v_ptr = &n;
+    unsigned char *c_ptr = v_ptr;
+
+    for (size_t i = 0; i < 4; i++)
+    {
+        buf[3 - i] = c_ptr[i];
+    }
+}
+
 int mbt_msg_receive_handler_request(
     __attribute((unused)) struct mbt_net_server *server,
     struct mbt_net_client *client)
@@ -38,11 +49,9 @@ int mbt_msg_send_handler_request(
     memset(buf, 0, 17);
     buf[3] = 13;
     buf[4] = MBT_MAGIC_REQUEST;
-
-    struct mbt_net_request req = client->request;
-    memcpy(&(req.index), buf + 5, 4);
-    memcpy(&(req.index), buf + 9, 4);
-    memcpy(&(req.index), buf + 13, 4);
+    putain_de_sa_race(client->request.index, buf + 5);
+    putain_de_sa_race(client->request.begin, buf + 9);
+    putain_de_sa_race(client->request.length, buf + 13);
 
     for (size_t i = 0; i < 17; i++)
     {
