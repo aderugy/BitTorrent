@@ -7,13 +7,13 @@
 #include <mbt/utils/str.h>
 #include <pwd.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
 #include "mbt/be/bencode.h"
-#include "stdio.h"
 bool is_dir(const char *path)
 {
     struct stat path_stat;
@@ -78,6 +78,7 @@ char *parse_path_get_dir_name(const char *path)
     {
         return NULL;
     }
+
     return dir_name + 1;
 }
 
@@ -86,7 +87,7 @@ struct mbt_be_pair *get_name(const char *path)
     struct mbt_str name;
     if (!mbt_str_ctor(&name, 64))
     {
-        mbt_str_free(&name);
+        errx(1, "failed to ctor mbt_be_pair");
         return NULL;
     }
     char *name_str;
@@ -389,7 +390,6 @@ bool mbt_be_make_torrent_file(const char *path)
     if (is_dir(path))
     {
         char *dir_name = parse_path_get_dir_name(path);
-        printf("dir_name -> %s\n", dir_name);
         mbt_str_pushcstr(&path_mbt, dir_name);
     }
     else

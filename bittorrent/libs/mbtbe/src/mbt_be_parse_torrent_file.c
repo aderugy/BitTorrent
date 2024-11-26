@@ -163,6 +163,11 @@ bool mbt_be_parse_torrent_file(const char *path, struct mbt_torrent *torrent)
     printf("data -> %s\n", view.data);
     struct mbt_be_node *node = mbt_be_decode(&view);
 
+    if (!node)
+    {
+        errx(1, "cannot parse node");
+        return false;
+    }
     if (node->type != MBT_BE_DICT)
     {
         errx(1, "mbt be parse torrent file : the node is not a dict\n");
