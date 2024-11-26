@@ -48,9 +48,13 @@ struct mbt_peer
     struct mbt_str *id;
     struct mbt_str *ip;
     struct mbt_str *port;
+
+    struct addrinfo *addr;
 };
 
 void mbt_net_context_print(struct mbt_net_context *ctx) MBT_NONNULL(1);
+
+void mbt_peer_init_addr(struct mbt_peer *peer);
 void mbt_peer_free(struct mbt_peer *peer);
 
 #endif // !NET_TYPES_H

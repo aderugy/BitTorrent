@@ -13,6 +13,8 @@
 
 #include "arpa/inet.h"
 #include "bits/stdint-uintn.h"
+#include "mbt/net/net.h"
+#include "netdb.h"
 
 struct curl_data
 {
@@ -297,6 +299,11 @@ static struct mbt_peer **parse_output(struct curl_data data)
     mbt_be_free(root);
     free(data.response);
     return peers;
+}
+
+void mbt_peer_init_addr(struct mbt_peer *peer)
+{
+    peer->addr = mbt_getaddrinfo(peer->ip->data, peer->port->data);
 }
 
 void mbt_peer_addr(struct mbt_peer *peer, struct sockaddr_in *addr)

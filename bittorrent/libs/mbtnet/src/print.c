@@ -23,6 +23,7 @@ void mbt_net_context_print(struct mbt_net_context *ctx)
 
     printf("\tDownloaded: %d - Uploaded: %d - Left: %zu\n", ctx->downloaded,
            ctx->uploaded, ctx->left);
+    printf("\tFile Handler: %p\n", ctx->fh);
 
     printf("END MBT_NET_CONTEXT\n\n");
 }

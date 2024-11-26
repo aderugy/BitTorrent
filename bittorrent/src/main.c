@@ -6,8 +6,8 @@
 #include "mbt/be/torrent.h"
 #include "mbt/be/types_mbtbe.h"
 #include "mbt/net/context.h"
+#include "mbt/net/leeching.h"
 #include "mbt/net/net_types.h"
-#include "mbt/net/tracker.h"
 #include "netinet/in.h"
 
 int main(int argc, char *argv[])
@@ -29,12 +29,12 @@ int main(int argc, char *argv[])
     struct in_addr ip;
     inet_pton(AF_INET, "127.0.0.1", &ip);
 
-    struct mbt_net_context *ctx = mbt_net_context_init(torrent, ip, 8000);
+    struct mbt_net_context *ctx = mbt_net_context_init(torrent, ip, 8001);
     mbt_net_context_print(ctx);
 
-    printf("MBT_NET_CONTACT_TRACKER\n");
-    int nb = mbt_net_contact_tracker(ctx);
-    printf("MBT_NET_CONTACT_TRACKER: %d\n\n", nb);
+    printf("MBT_NET_LEECH\n");
+    mbt_leech(ctx);
+    printf("END MBT_NET_LEECH\n\n");
 
     mbt_net_context_free(ctx);
     mbt_torrent_free(torrent);

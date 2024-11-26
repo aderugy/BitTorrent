@@ -4,6 +4,7 @@
 #include <mbt/be/torrent_getters.h>
 #include <mbt/net/net_types.h>
 #include <mbt/utils/random.h>
+#include <mbt/utils/xalloc.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -13,13 +14,13 @@
 struct mbt_net_context *mbt_net_context_init(struct mbt_torrent *t,
                                              struct in_addr ip, uint16_t port)
 {
-    struct mbt_net_context *ctx = calloc(1, sizeof(struct mbt_net_context));
+    struct mbt_net_context *ctx = xcalloc(1, sizeof(struct mbt_net_context));
     if (!ctx)
     {
         errx(EXIT_FAILURE, "Allocation error");
     }
 
-    char *ip_buf = calloc(255 + 1, sizeof(char));
+    char *ip_buf = xcalloc(255 + 1, sizeof(char));
     inet_ntop(AF_INET, &ip, ip_buf, 255);
 
     char *port_str;
@@ -38,7 +39,6 @@ struct mbt_net_context *mbt_net_context_init(struct mbt_torrent *t,
     ctx->left = t->info->length;
 
     ctx->fh = mbt_file_handler_init(t);
-
     return ctx;
 }
 

@@ -36,14 +36,14 @@ enum mbt_msg_type
 
 struct mbt_msg
 {
-    char len[4]; // Big Endian length of message
-    enum mbt_msg_type type;
+    unsigned char len[4];
+    unsigned char type;
     char payload[];
 };
 
 void mbt_msg_print(struct mbt_msg *msg);
 void mbt_msg_handshake_print(struct mbt_msg_handshake *msg);
-uint64_t mbt_msg_length(struct mbt_msg *msg);
+uint32_t mbt_msg_length(struct mbt_msg *msg);
 void mbt_msg_discard(struct mbt_net_client *client, size_t size);
 
 void mbt_net_server_process_event(struct mbt_net_server *server,

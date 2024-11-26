@@ -144,17 +144,12 @@ enum mbt_piece_status mbt_piece_check(struct mbt_file_handler *fh,
     {
         return MBT_PIECE_DOWNLOADING;
     }
-    for (size_t i = 0; i < MBT_PIECE_NB_BLOCK; i++)
-    {
-        if (!piece->status[i])
-        {
-            return MBT_PIECE_DOWNLOADING;
-        }
-    }
 
     // Compare hashes
     void *v_data = piece->data;
-    char *cur_hash = sha1(v_data, MBT_PIECE_SIZE);
+    // @TODO: hash with msg length not piece length
+    char *cur_hash = sha1(v_data, 14);
+
     int res = memcmp(cur_hash, piece->h, MBT_H_LENGTH) == 0;
     free(cur_hash);
 
@@ -170,5 +165,32 @@ bool mbt_piece_write(struct mbt_file_handler *fh, size_t piece_index)
         return false;
     }
 
+    return true;
+}
+
+bool mbt_piece_write_block(struct mbt_file_handler *fh, struct mbt_str *data,
+                           uint32_t piece_index, uint32_t piece_offset)
+{
+    if (piece_index >= fh->nb_pieces)
+    {
+        return false;
+    }
+
+    if (data->size < MBT_BLOCK_SIZE && piece_index < fh->nb_pieces - 1)
+    {
+        return false;
+    }
+
+    size_t block_index = piece_offset / MBT_BLOCK_SIZE;
+    struct mbt_piece *piece = fh->pieces[piece_index];
+    if (!piece->data)
+    {
+        piece->data = xcalloc(MBT_PIECE_NB_BLOCK, MBT_BLOCK_SIZE);
+    }
+
+    struct mbt_block *block = piece->data + block_index;
+    memcpy(block, data->data, data->size);
+
+    mbt_piece_block_set_received(fh, piece_index, block_index, true);
     return true;
 }
