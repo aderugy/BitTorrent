@@ -26,9 +26,12 @@ bool allocate_info(struct info *info)
     }
 
     info->info_string = calloc(1, sizeof(struct mbt_str));
-    if (!mbt_str_ctor(info->info_string, 64)) {
+    if (!mbt_str_ctor(info->info_string, 64))
+    {
         errx(1, "allocate_info -> failed to allocate info string");
     }
+
+    info->files = calloc(1, sizeof(struct mbt_torrent_file *));
 
     return true;
 }

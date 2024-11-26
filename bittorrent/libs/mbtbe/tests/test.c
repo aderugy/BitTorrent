@@ -13,12 +13,23 @@ void print_torrent(struct mbt_torrent *torrent)
     printf("info ->\n");
     printf("--pieces -> %s\n", torrent->info->pieces->data);
     printf("--info string -> %s\n", torrent->info->info_string->data);
+    for (size_t i = 0; torrent->info->files[i]; i++)
+    {
+        printf("--file %li ->\n", i);
+        printf("----length -> %li\n", torrent->info->files[i]->length);
+        printf("----path -> ");
+        for (size_t j = 0; torrent->info->files[i]->path[j]; j++)
+        {
+            printf("/%s", torrent->info->files[i]->path[j]->data);
+        }
+        printf("\n");
+    }
 }
 
-void test_parse(void)
+void test_parse(char *filename)
 {
     struct mbt_torrent *torrent = mbt_torrent_init();
-    mbt_be_parse_torrent_file("torrents/bonapart.png.torrent", torrent);
+    mbt_be_parse_torrent_file(filename, torrent);
     print_torrent(torrent);
     mbt_torrent_free(torrent);
 }
@@ -31,6 +42,6 @@ int main(int argc, char **argv)
     }
 
     mbt_be_make_torrent_file(argv[1]);
-    test_parse();
+    test_parse("torrents/bonapart.png.torrent");
     return EXIT_SUCCESS;
 }

@@ -12,6 +12,69 @@
 #include "mbt/utils/hash.h"
 #include "stdio.h"
 
+void push_file(struct mbt_torrent *torrent, struct mbt_be_node **path_list,
+               size_t length)
+{
+    struct mbt_torrent_file **list = torrent->info->files;
+    list = realloc(
+        list, sizeof(struct mbt_torrent_file *) * (torrent->info->length + 2));
+    torrent->info->files = list;
+
+    size_t index = 0;
+    while (list[index])
+    {
+        index++;
+    }
+    list[index] = calloc(1, sizeof(struct mbt_torrent_file));
+    for (size_t j = 0; path_list[j]; j++)
+    {
+        list[index]->path =
+            realloc(list[index]->path, sizeof(struct mbt_str *) * (j + 2));
+        if (!path_list[j]->v.str.data)
+        {
+            errx(1, "mbt be parse torrent file : path is null");
+            return;
+        }
+        struct mbt_str *str = calloc(1, sizeof(struct mbt_str));
+        if (!mbt_str_ctor(str, 64))
+        {
+            errx(1, "mbt be parse torrent file : cannot init path");
+            return;
+        }
+        if (!mbt_str_pushcstr(str, path_list[j]->v.str.data))
+        {
+            errx(1, "mbt be parse torrent file : cannot push path");
+            return;
+        }
+        list[index]->path[j] = str;
+        list[index]->path_size++;
+        list[index]->path[j + 1] = NULL;
+    }
+
+    list[index]->length = length;
+    list[index]->start_index = torrent->info->length;
+    torrent->info->length += length;
+    list[index + 1] = NULL;
+}
+bool handle_files_list(struct mbt_torrent *torrent, struct mbt_be_node *node,
+                       size_t index)
+{
+    struct mbt_be_node *val = node->v.dict[index]->val;
+    size_t i = 0;
+    struct mbt_be_node **list = val->v.list;
+    while (list[i])
+    {
+        struct mbt_be_node *file = list[i];
+        struct mbt_be_node **list_path = file->v.dict[1]->val->v.list;
+
+        size_t length = file->v.dict[0]->val->v.nb;
+
+        push_file(torrent, list_path, length);
+        i++;
+    }
+    return true;
+}
+
 bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
                   size_t index)
 {
@@ -59,6 +122,11 @@ bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
             {
                 torrent->info->length = nval->v.nb;
             }
+            else if (strcmp(key.data, "files") == 0)
+            {
+                printf("handling files\n");
+                handle_files_list(torrent, val, i);
+            }
             else
             {
                 errx(1, "Unknown key: %s", key.data);
@@ -92,6 +160,7 @@ bool mbt_be_parse_torrent_file(const char *path, struct mbt_torrent *torrent)
 
     struct mbt_cview view = MBT_CVIEW_OF(data);
 
+    printf("data -> %s\n", view.data);
     struct mbt_be_node *node = mbt_be_decode(&view);
 
     if (node->type != MBT_BE_DICT)

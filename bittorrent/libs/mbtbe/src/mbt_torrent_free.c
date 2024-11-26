@@ -5,8 +5,9 @@
 
 void delocate_info(struct info *info)
 {
-    if (info->info_string) {
-    mbt_str_free(info->info_string);
+    if (info->info_string)
+    {
+        mbt_str_free(info->info_string);
     }
     if (info->name)
     {
@@ -15,6 +16,19 @@ void delocate_info(struct info *info)
     if (info->pieces)
     {
         mbt_str_free(info->pieces);
+    }
+    if (info->files)
+    {
+        for (size_t i = 0; info->files[i]; i++)
+        {
+            for (size_t j = 0; info->files[i]->path[j]; j++)
+            {
+                mbt_str_free(info->files[i]->path[j]);
+            }
+            free(info->files[i]->path);
+            free(info->files[i]);
+        }
+        free(info->files);
     }
 }
 

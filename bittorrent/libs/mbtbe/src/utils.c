@@ -1,6 +1,10 @@
+#include <err.h>
 #include <mbt/be/bencode.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "mbt/be/types_mbtbe.h"
 
 struct mbt_be_node *mbt_be_dict_get(struct mbt_be_node *dict, const char *key)
 {
