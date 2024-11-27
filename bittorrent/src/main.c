@@ -54,7 +54,21 @@ int main(int argc, char *argv[])
         {
             errx(EXIT_FAILURE, "mbt_be_parse_torrent_file");
         }
-        mbt_torrent_print(torrent);
+        mbt_torrent_print(torrent, 0);
+        mbt_torrent_free(torrent);
+        return 0;
+    }
+    else if (argc > 2
+             && (strcmp(argv[1], "-PF") == 0
+                 || strcmp(argv[1], "--pretty-print-torrent-files") == 0))
+    {
+        verify_path(&argv[2]);
+        struct mbt_torrent *torrent = mbt_torrent_init();
+        if (!mbt_be_parse_torrent_file(argv[2], torrent))
+        {
+            errx(EXIT_FAILURE, "mbt_be_parse_torrent_file");
+        }
+        mbt_torrent_print(torrent, 1);
         mbt_torrent_free(torrent);
         return 0;
     }
@@ -70,7 +84,7 @@ int main(int argc, char *argv[])
     {
         errx(EXIT_FAILURE, "mbt_be_parse_torrent_file");
     }
-    mbt_torrent_print(torrent);
+    mbt_torrent_print(torrent, 0);
 
     struct in_addr ip;
     inet_pton(AF_INET, "127.0.0.1", &ip);

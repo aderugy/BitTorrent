@@ -32,7 +32,7 @@ struct info
     struct mbt_str *info_string;
 };
 
-void mbt_torrent_print(struct mbt_torrent *torrent);
+void mbt_torrent_print(struct mbt_torrent *torrent, int mode);
 struct mbt_be_node *mbt_be_dict_get(struct mbt_be_node *dict, const char *key);
 void pretty_print_torrent(struct mbt_torrent *torrent);
 

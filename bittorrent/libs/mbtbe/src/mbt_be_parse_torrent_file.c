@@ -138,7 +138,7 @@ bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
     }
     else
     {
-        return false;
+        errx(1, "Unknown key: %s", key.data);
     }
     return true;
 }
