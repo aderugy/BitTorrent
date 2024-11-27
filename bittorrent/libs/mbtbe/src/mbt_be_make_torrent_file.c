@@ -15,7 +15,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "bits/stdint-uintn.h"
 #include "mbt/be/bencode.h"
 #include "mbt/utils/view.h"
 
@@ -32,9 +31,9 @@ void get_pieces_string(const char *path, struct mbt_str *sha1_mbt)
         mbt_str_free(&data);
         return;
     }
-    size_t remaining_size = data.size;
     for (size_t i = 0; i < data.size; i += 256 * 1024)
     {
+        size_t remaining_size = data.size - i;
         if (remaining_size < 256 * 1024)
         {
             char *sha1_str = sha1(data.data + i, remaining_size);
@@ -49,6 +48,7 @@ void get_pieces_string(const char *path, struct mbt_str *sha1_mbt)
         else
         {
             char *sha1_str = sha1(data.data + i, 256 * 1024);
+
             if (!mbt_str_pushcstr(sha1_mbt, sha1_str))
             {
                 mbt_str_free(sha1_mbt);
@@ -365,24 +365,21 @@ struct mbt_be_pair *get_pieces(const char *path)
 struct mbt_be_pair *create_info_dict(const char *path)
 {
     struct mbt_be_pair **d = calloc(1, sizeof(struct mbt_be_pair));
-    d = add_to_dict(d, get_pieces_length());
 
-    d = add_to_dict(d, get_name(path));
     if (!is_dir(path))
     {
-        d = add_to_dict(d, get_pieces(path));
+        d = add_to_dict(d, get_name(path));
         d = add_to_dict(d, get_length(path));
+        d = add_to_dict(d, get_pieces_length());
+        d = add_to_dict(d, get_pieces(path));
     }
     else
     {
-        uint64_t size = 0;
-        d = add_to_dict(d, get_pieces_dir(path, &size));
-        struct mbt_be_node *length_node = mbt_be_num_init(size);
-        struct mbt_be_pair *length_pair =
-            transform_to_pair(length_node, "length");
-        d = add_to_dict(d, length_pair);
-
         d = add_to_dict(d, list_of_files(path));
+        d = add_to_dict(d, get_name(path));
+        uint64_t size = 0;
+        d = add_to_dict(d, get_pieces_length());
+        d = add_to_dict(d, get_pieces_dir(path, &size));
     }
     struct mbt_be_node *node = mbt_be_dict_init(d);
     struct mbt_be_pair *pair = transform_to_pair(node, "info");
