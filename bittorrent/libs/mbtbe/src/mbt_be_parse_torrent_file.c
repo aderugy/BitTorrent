@@ -160,7 +160,11 @@ bool mbt_be_parse_torrent_file(const char *path, struct mbt_torrent *torrent)
 
     struct mbt_cview view = MBT_CVIEW_OF(data);
 
-    printf("data -> %s\n", view.data);
+    /*for (size_t i = 0; i < view.size; i++)
+    {
+        putchar(view.data[i]);
+    }*/
+
     struct mbt_be_node *node = mbt_be_decode(&view);
 
     if (!node)

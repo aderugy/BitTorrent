@@ -1,11 +1,11 @@
 #include <err.h>
+#include <mbt/be/types_mbtbe.h>
 #include <mbt/utils/str.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "arpa/inet.h"
 #include "mbt/be/torrent.h"
-#include "mbt/be/types_mbtbe.h"
 #include "mbt/net/context.h"
 #include "mbt/net/leeching.h"
 #include "mbt/net/net_types.h"
@@ -38,7 +38,25 @@ int main(int argc, char *argv[])
         && (strcmp(argv[1], "-m") == 0 || strcmp(argv[1], "--mktorrent") == 0))
     {
         verify_path(&argv[2]);
-        return mbt_be_make_torrent_file(argv[2]);
+        if (!mbt_be_make_torrent_file(argv[2]))
+        {
+            errx(1, "mbt_be_make_torrent_file");
+        }
+        return 0;
+    }
+    else if (argc > 2
+             && (strcmp(argv[1], "-P") == 0
+                 || strcmp(argv[1], "--pretty-print-torrent-file") == 0))
+    {
+        verify_path(&argv[2]);
+        struct mbt_torrent *torrent = mbt_torrent_init();
+        if (!mbt_be_parse_torrent_file(argv[2], torrent))
+        {
+            errx(EXIT_FAILURE, "mbt_be_parse_torrent_file");
+        }
+        mbt_torrent_print(torrent);
+        mbt_torrent_free(torrent);
+        return 0;
     }
     if (argc != 2)
     {

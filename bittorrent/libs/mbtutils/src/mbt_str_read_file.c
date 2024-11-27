@@ -10,11 +10,13 @@ bool mbt_str_read_file(const char *path, struct mbt_str *str)
     {
         return false;
     }
-    char line[100];
-    while (fgets(line, 100, file))
+
+    int ch;
+    while ((ch = fgetc(file)) != EOF)
     {
-        mbt_str_pushcstr(str, line);
+        mbt_str_pushc(str, ch);
     }
+
     fclose(file);
     return true;
 }

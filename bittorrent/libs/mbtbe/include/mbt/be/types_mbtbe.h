@@ -34,5 +34,6 @@ struct info
 
 void mbt_torrent_print(struct mbt_torrent *torrent);
 struct mbt_be_node *mbt_be_dict_get(struct mbt_be_node *dict, const char *key);
+void pretty_print_torrent(struct mbt_torrent *torrent);
 
 #endif // !TYPES_MBTBE_H

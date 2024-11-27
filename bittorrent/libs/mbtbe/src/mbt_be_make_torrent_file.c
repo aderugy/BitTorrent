@@ -143,37 +143,30 @@ struct mbt_be_pair *get_length(const char *path)
     return pair;
 }
 
-struct mbt_be_pair *get_pieces(const char *path)
+void get_pieces_string(const char *path, struct mbt_str *sha1_mbt)
 {
     struct mbt_str data;
     if (!mbt_str_ctor(&data, 64))
     {
         mbt_str_free(&data);
-        return NULL;
+        return;
     }
+    printf("path : %s\n", path);
     if (!mbt_str_read_file(path, &data))
     {
         mbt_str_free(&data);
-        return NULL;
+        return;
     }
-
-    struct mbt_str sha1_mbt;
-    if (!mbt_str_ctor(&sha1_mbt, 64))
-    {
-        mbt_str_free(&sha1_mbt);
-        return NULL;
-    }
-
     size_t remaining_size = data.size;
     for (size_t i = 0; i < data.size; i += 256 * 1024)
     {
         if (remaining_size < 256 * 1024)
         {
             char *sha1_str = sha1(data.data + i, remaining_size);
-            if (!mbt_str_pushcstr(&sha1_mbt, sha1_str))
+            if (!mbt_str_pushcstr(sha1_mbt, sha1_str))
             {
-                mbt_str_free(&sha1_mbt);
-                return NULL;
+                mbt_str_free(sha1_mbt);
+                return;
             }
             free(sha1_str);
             break;
@@ -181,33 +174,15 @@ struct mbt_be_pair *get_pieces(const char *path)
         else
         {
             char *sha1_str = sha1(data.data + i, 256 * 1024);
-            if (!mbt_str_pushcstr(&sha1_mbt, sha1_str))
+            if (!mbt_str_pushcstr(sha1_mbt, sha1_str))
             {
-                mbt_str_free(&sha1_mbt);
-                return NULL;
+                mbt_str_free(sha1_mbt);
+                return;
             }
             free(sha1_str);
         }
     }
-
-    struct mbt_be_node *node = mbt_be_str_init(MBT_CVIEW_OF(sha1_mbt));
-    struct mbt_be_pair *pair = transform_to_pair(node, "pieces");
     mbt_str_dtor(&data);
-    mbt_str_dtor(&sha1_mbt);
-    return pair;
-}
-
-struct mbt_be_pair *create_info_dict(const char *path)
-{
-    struct mbt_be_pair **d = calloc(3 + 1, sizeof(struct mbt_be_pair));
-    d[0] = get_pieces_length();
-    d[1] = get_name(path);
-    d[2] = get_pieces(path);
-    d[3] = get_length(path);
-    d[4] = NULL;
-    struct mbt_be_node *node = mbt_be_dict_init(d);
-    struct mbt_be_pair *pair = transform_to_pair(node, "info");
-    return pair;
 }
 
 struct mbt_be_pair *get_creation_date(const char *path)
@@ -295,13 +270,24 @@ struct mbt_be_pair **add_to_dict(struct mbt_be_pair **d,
 struct mbt_be_node **add_to_list(struct mbt_be_node **l,
                                  struct mbt_be_node *node)
 {
+    if (l == NULL)
+    {
+        l = calloc(1, sizeof(struct mbt_be_node));
+    }
+    size_t size = 0;
+    while (l[size] != NULL)
+    {
+        size++;
+    }
     struct mbt_be_node **a =
-        realloc(l, sizeof(struct mbt_be_node) * (sizeof(l) + 1));
+        realloc(l, sizeof(struct mbt_be_node) * (size + 2));
+
     size_t i = 0;
     while (a[i] != NULL)
     {
         i++;
     }
+    printf("i : %li\n", i);
     a[i] = node;
     a[i + 1] = NULL;
     return a;
@@ -334,14 +320,65 @@ struct mbt_be_node *dict_of_file_length_path(char *path)
     return node;
 }
 
-struct mbt_be_pair *list_of_files(const char *path)
+void fill_pieces_rec(char *path, struct mbt_str *pieces)
 {
     DIR *d = opendir(path);
     if (d == NULL)
     {
-        return NULL;
+        return;
     }
-    struct mbt_be_node **d_files = calloc(1, sizeof(struct mbt_be_pair));
+    struct dirent *dir;
+    while ((dir = readdir(d)) != NULL)
+    {
+        if (dir->d_type == DT_REG)
+        {
+            char *file_path = calloc(1, strlen(path) + strlen(dir->d_name) + 1);
+            strcat(file_path, path);
+            strcat(file_path, dir->d_name);
+            printf("file path : %s\n", file_path);
+            struct mbt_str *sha1_mbt = calloc(1, sizeof(struct mbt_str));
+            if (!mbt_str_ctor(sha1_mbt, 64))
+            {
+                errx(1, "fill pieces rec : cannot init sha1_mbt");
+            }
+            get_pieces_string(file_path, sha1_mbt);
+            if (!mbt_str_pushcstr(pieces, sha1_mbt->data))
+            {
+                errx(1, "fill pieces rec : cannot pushcstr");
+            }
+            mbt_str_dtor(sha1_mbt);
+            free(sha1_mbt);
+            free(file_path);
+        }
+        else if (dir->d_type == DT_DIR)
+        {
+            if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0)
+            {
+                continue;
+            }
+            char *new_path = calloc(1, strlen(path) + strlen(dir->d_name) + 2);
+            strcat(new_path, path);
+            strcat(new_path, dir->d_name);
+            strcat(new_path, "/");
+
+            fill_pieces_rec(new_path, pieces);
+        }
+    }
+    closedir(d);
+}
+
+void fill_d_files_rec(char *path, struct mbt_be_node ***d_files)
+{
+    if (d_files == NULL)
+    {
+        d_files = calloc(1, sizeof(struct mbt_be_node));
+    }
+
+    DIR *d = opendir(path);
+    if (d == NULL)
+    {
+        return;
+    }
     struct dirent *dir;
     while ((dir = readdir(d)) != NULL)
     {
@@ -351,15 +388,39 @@ struct mbt_be_pair *list_of_files(const char *path)
             strcat(file_path, path);
             strcat(file_path, dir->d_name);
             struct mbt_be_node *node = dict_of_file_length_path(file_path);
+            printf("file path : %s\n", file_path);
             free(file_path);
-            d_files = add_to_list(d_files, node);
+            *d_files = add_to_list(*d_files, node);
+        }
+        else if (dir->d_type == DT_DIR)
+        {
+            if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0)
+            {
+                continue;
+            }
+            char *new_path = calloc(1, strlen(path) + strlen(dir->d_name) + 2);
+            strcat(new_path, path);
+            strcat(new_path, dir->d_name);
+            strcat(new_path, "/");
+
+            fill_d_files_rec(new_path, d_files);
+            free(new_path);
         }
     }
+    closedir(d);
+}
+
+struct mbt_be_pair *list_of_files(const char *path)
+{
+    struct mbt_be_node **d_files = calloc(1, sizeof(struct mbt_be_pair));
+    char *copy_path = calloc(1, strlen(path) + 1);
+    strcat(copy_path, path);
+
+    fill_d_files_rec(copy_path, &d_files);
 
     struct mbt_be_node *list = mbt_be_list_init(d_files);
 
-    closedir(d);
-
+    free(copy_path);
     return transform_to_pair(list, "files");
 }
 
@@ -373,6 +434,59 @@ void print_pair(struct mbt_be_pair *pair)
     }
 }
 
+struct mbt_be_pair *get_pieces_dir(const char *path)
+{
+    struct mbt_str pieces;
+    if (!mbt_str_ctor(&pieces, 64))
+    {
+        mbt_str_free(&pieces);
+        return NULL;
+    }
+    char *new_path = calloc(1, strlen(path) + 1);
+    strcat(new_path, path);
+
+    fill_pieces_rec(new_path, &pieces);
+    free(new_path);
+    struct mbt_be_node *node = mbt_be_str_init(MBT_CVIEW_OF(pieces));
+    struct mbt_be_pair *pair = transform_to_pair(node, "pieces");
+    mbt_str_dtor(&pieces);
+    return pair;
+};
+struct mbt_be_pair *get_pieces(const char *path)
+{
+    struct mbt_str sha1_mbt;
+    if (!mbt_str_ctor(&sha1_mbt, 64))
+    {
+        mbt_str_free(&sha1_mbt);
+        return NULL;
+    }
+    get_pieces_string(path, &sha1_mbt);
+
+    struct mbt_be_node *node = mbt_be_str_init(MBT_CVIEW_OF(sha1_mbt));
+    struct mbt_be_pair *pair = transform_to_pair(node, "pieces");
+    mbt_str_dtor(&sha1_mbt);
+    return pair;
+}
+
+struct mbt_be_pair *create_info_dict(const char *path)
+{
+    struct mbt_be_pair **d = calloc(1, sizeof(struct mbt_be_pair));
+    d = add_to_dict(d, get_pieces_length());
+
+    d = add_to_dict(d, get_name(path));
+    d = add_to_dict(d, get_length(path));
+    if (!is_dir(path))
+    {
+        d = add_to_dict(d, get_pieces(path));
+    }
+    else
+    {
+        d = add_to_dict(d, get_pieces_dir(path));
+    }
+    struct mbt_be_node *node = mbt_be_dict_init(d);
+    struct mbt_be_pair *pair = transform_to_pair(node, "info");
+    return pair;
+}
 bool mbt_be_make_torrent_file(const char *path)
 {
     struct mbt_str data;
