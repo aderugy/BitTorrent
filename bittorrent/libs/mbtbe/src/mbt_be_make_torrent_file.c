@@ -151,7 +151,6 @@ void get_pieces_string(const char *path, struct mbt_str *sha1_mbt)
         mbt_str_free(&data);
         return;
     }
-    printf("path : %s\n", path);
     if (!mbt_str_read_file(path, &data))
     {
         mbt_str_free(&data);
@@ -287,7 +286,6 @@ struct mbt_be_node **add_to_list(struct mbt_be_node **l,
     {
         i++;
     }
-    printf("i : %li\n", i);
     a[i] = node;
     a[i + 1] = NULL;
     return a;
@@ -335,13 +333,14 @@ void fill_pieces_rec(char *path, struct mbt_str *pieces)
             char *file_path = calloc(1, strlen(path) + strlen(dir->d_name) + 1);
             strcat(file_path, path);
             strcat(file_path, dir->d_name);
-            printf("file path : %s\n", file_path);
+            printf("%s\n", file_path);
             struct mbt_str *sha1_mbt = calloc(1, sizeof(struct mbt_str));
             if (!mbt_str_ctor(sha1_mbt, 64))
             {
                 errx(1, "fill pieces rec : cannot init sha1_mbt");
             }
             get_pieces_string(file_path, sha1_mbt);
+
             if (!mbt_str_pushcstr(pieces, sha1_mbt->data))
             {
                 errx(1, "fill pieces rec : cannot pushcstr");
@@ -362,6 +361,7 @@ void fill_pieces_rec(char *path, struct mbt_str *pieces)
             strcat(new_path, "/");
 
             fill_pieces_rec(new_path, pieces);
+            free(new_path);
         }
     }
     closedir(d);
@@ -388,7 +388,6 @@ void fill_d_files_rec(char *path, struct mbt_be_node ***d_files)
             strcat(file_path, path);
             strcat(file_path, dir->d_name);
             struct mbt_be_node *node = dict_of_file_length_path(file_path);
-            printf("file path : %s\n", file_path);
             free(file_path);
             *d_files = add_to_list(*d_files, node);
         }
