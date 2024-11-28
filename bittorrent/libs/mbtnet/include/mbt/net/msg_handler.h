@@ -3,6 +3,8 @@
 
 #include <mbt/net/msg.h>
 
+#include "mbt/net/net.h"
+
 #define MBT_HANDLER_CLIENT_ERROR -1
 #define MBT_HANDLER_REQUEST_CLOSE 1
 #define MBT_HANDLER_SUCCESS 0
@@ -58,7 +60,7 @@ int mbt_msg_send_handler_choked(
 // HAVE HANDLERS
 int mbt_msg_send_handler_have(
     __attribute((unused)) struct mbt_net_server *server,
-    struct mbt_net_client *client);
+    struct mbt_net_stream *stream);
 
 int mbt_msg_receive_handler_have(
     __attribute((unused)) struct mbt_net_server *server,
@@ -97,7 +99,7 @@ int mbt_msg_receive_handler_request(
 
 int mbt_msg_send_handler_request(
     __attribute((unused)) struct mbt_net_server *server,
-    struct mbt_net_client *client);
+    struct mbt_net_stream *stream);
 
 // CANCEL HANDLER
 int mbt_msg_receive_handler_cancel(

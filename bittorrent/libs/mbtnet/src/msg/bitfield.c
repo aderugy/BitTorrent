@@ -7,7 +7,6 @@
 #include <mbt/utils/xalloc.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 int mbt_msg_receive_handler_bitfield(
@@ -17,15 +16,10 @@ int mbt_msg_receive_handler_bitfield(
     if (client->state != MBT_CLIENT_HANDSHAKEN)
     {
         warnx("Receiving bitfield before handshake / more than once");
-        return MBT_HANDLER_SUCCESS;
+        return MBT_HANDLER_REQUEST_CLOSE;
     }
 
-    if (client->bitfield)
-    {
-        free(client->bitfield);
-    }
-
-    printf("Received BitField !!\n");
+    printf("recv: bitfield: %d\n", client->fd);
 
     void *v_msg = client->buffer;
     struct mbt_msg *msg = v_msg;
@@ -35,7 +29,7 @@ int mbt_msg_receive_handler_bitfield(
 
     for (uint32_t i = 0; i < bytes; i++)
     {
-        client->bitfield[i] = (msg->payload[i] & (1 << (bytes - i - 1))) > 0;
+        client->bitfield[i] = (msg->payload[i] & (1 << (7 - (i % 8)))) > 0;
 
         printf("%c", client->bitfield[i] ? '1' : '0');
         printf(" ");

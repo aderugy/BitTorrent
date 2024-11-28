@@ -12,6 +12,10 @@
 #define MBT_PIECE_SIZE (1 << 18)
 #define MBT_PIECE_NB_BLOCK (MBT_PIECE_SIZE / MBT_BLOCK_SIZE)
 
+#define BLOCK_STATUS_FREE 0
+#define BLOCK_STATUS_COMPLETED 1
+#define BLOCK_STATUS_DL 2
+
 struct mbt_file_handler
 {
     struct mbt_str *h;
@@ -33,7 +37,7 @@ struct mbt_piece
     size_t nb_blocks;
 
     bool completed;
-    bool status[MBT_PIECE_NB_BLOCK];
+    int status[MBT_PIECE_NB_BLOCK];
 
     struct mbt_block *data;
 };

@@ -10,7 +10,9 @@
 #include <unistd.h>
 
 #include "mbt/net/context.h"
+#include "mbt/net/fifo.h"
 #include "mbt/net/msg_handler.h"
+#include "stdio.h"
 
 #define MAX_CONCURRENT_IO 4
 
@@ -49,6 +51,7 @@ struct mbt_net_server *mbt_net_server_init(struct mbt_net_context *ctx)
         errx(EXIT_FAILURE, "mbt_getaddrinfo");
     }
 
+    server->streams = fifo_init();
     return server;
 }
 
@@ -60,73 +63,39 @@ void mbt_net_server_free(struct mbt_net_server *server)
 }
 
 static int mbt_net_server_process_out_events(struct mbt_net_server *server,
-                                             struct mbt_net_client **clients,
                                              struct mbt_net_client *client,
                                              struct epoll_event current)
 {
-    int status = MBT_HANDLER_SUCCESS;
-
     if (!(current.events & EPOLLOUT))
     {
-        return status;
+        return MBT_HANDLER_SUCCESS;
     }
 
     // The client isnt connected yet
-    if (status == MBT_HANDLER_SUCCESS
-        && client->state == MBT_CLIENT_WAITING_CONNECTION)
+    if (client->state == MBT_CLIENT_WAITING_CONNECTION)
     {
         // Perform the connection check (waited by epoll)
         // The state is updated to MBT_HANDLER_CONNECTED
-        if (!mbt_net_client_check_connect(client))
-        {
-            status = MBT_HANDLER_CLIENT_ERROR;
-        }
+        return mbt_net_client_check_connect(client) ? MBT_HANDLER_SUCCESS
+                                                    : MBT_HANDLER_CLIENT_ERROR;
     }
 
     // The client hasnt been hand shaken yet
-    if (status == MBT_HANDLER_SUCCESS && client->state == MBT_CLIENT_CONNECTED)
+    if (client->state == MBT_CLIENT_CONNECTED)
     {
         // Send the handshake to the client
         // The state is updated to MBT_CLIENT_WAITING_HANDSHAKE
-        status = mbt_net_client_handshake(server, client);
+        return mbt_net_client_handshake(server, client);
     }
 
-    if (status == MBT_HANDLER_SUCCESS
-        && client->state == MBT_CLIENT_BITFIELD_RECEIVED)
+    if (client->state == MBT_CLIENT_BITFIELD_RECEIVED)
     {
-        if (!mbt_net_client_next_piece(server->ctx->fh, clients, client))
-        {
-            status = MBT_HANDLER_REQUEST_CLOSE;
-        }
-        else
-        {
-            // Set connection in interested mode
-            // The state is updated to MBT_CLIENT_REQUESTING
-            status = mbt_msg_send_handler_interested(server, client);
-        }
+        // Set connection in interested mode
+        // The state is updated to MBT_CLIENT_READY
+        return mbt_msg_send_handler_interested(server, client);
     }
 
-    if (status == MBT_HANDLER_SUCCESS && client->state == MBT_CLIENT_READY
-        && !client->choked)
-    {
-        // Connection got unchoked
-        // Sends the request
-        // Connection is upgraded to MBT_CLIENT_DOWNLOADED
-
-        status = mbt_msg_send_handler_request(server, client);
-    }
-
-    if (status == MBT_HANDLER_SUCCESS && client->state == MBT_CLIENT_COMPLETED
-        && !client->choked)
-    {
-        if (mbt_net_client_next_block(server->ctx->fh, client)
-            || mbt_net_client_next_piece(server->ctx->fh, clients, client))
-        {
-            status = mbt_msg_send_handler_request(server, client);
-        }
-    }
-
-    return status;
+    return MBT_HANDLER_SUCCESS;
 }
 
 void mbt_net_server_process_event(struct mbt_net_server *server,
@@ -151,6 +120,7 @@ void mbt_net_server_process_event(struct mbt_net_server *server,
 
         struct mbt_net_client *client =
             mbt_net_clients_find(*clients, client_fd);
+
         if (!client)
         {
             warnx("Unknown fd. Removing it from the peers");
@@ -158,7 +128,7 @@ void mbt_net_server_process_event(struct mbt_net_server *server,
         }
 
         int out_status =
-            mbt_net_server_process_out_events(server, clients, client, current);
+            mbt_net_server_process_out_events(server, client, current);
         if (out_status != MBT_HANDLER_SUCCESS)
         {
             mbt_net_clients_remove(server, clients, client_fd,
@@ -168,6 +138,7 @@ void mbt_net_server_process_event(struct mbt_net_server *server,
         // Make sure client has sent data to avoid blocking recv
         if ((current.events & EPOLLIN) == 0)
         {
+            mbt_msg_process(server, client, NULL, 0);
             continue;
         }
 

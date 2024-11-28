@@ -1,4 +1,5 @@
 #include <bits/stdint-uintn.h>
+#include <err.h>
 #include <mbt/file/file_types.h>
 #include <mbt/net/msg.h>
 #include <mbt/net/net_types.h>
@@ -25,7 +26,7 @@ void mbt_msg_print(struct mbt_msg *msg)
         return;
     }
 
-    printf("----- Received message (%zu): -----\n", length);
+    printf("---------------- NEW MESSAGE --%zu bytes--------\n\n", length);
     printf("----- START RAW -----\n");
     void *v_msg = msg;
     unsigned char *c_msg = v_msg;
@@ -35,13 +36,12 @@ void mbt_msg_print(struct mbt_msg *msg)
     }
     printf("\n------ END RAW ------\n");
 
-    printf("Type (int) = %02X\n", c_msg[4]);
     printf("\tType: %s\n", names[msg->type]);
     printf("\tLength: %zu\n", length);
     printf("-- BEGIN PAYLOAD --\n");
     fwrite(msg->payload, sizeof(char), length - 1, stdout);
     printf("\n-- END PAYLOAD --\n");
-    printf("----- END MESSAGE -----\n\n");
+    printf("---------------- END MESSAGE -----------------\n\n");
 }
 
 void mbt_msg_handshake_print(struct mbt_msg_handshake *msg)
@@ -55,7 +55,8 @@ void mbt_msg_handshake_print(struct mbt_msg_handshake *msg)
     printf("\n\tInfo Hash: ");
     for (size_t i = 0; i < MBT_H_LENGTH; i++)
     {
-        printf("%02X", msg->info_hash[i]);
+        unsigned char c = msg->info_hash[i];
+        printf("%02X", c);
     }
 
     char *peer_id = xcalloc(PEER_ID_LENGTH + 1, sizeof(char));
@@ -122,20 +123,21 @@ bool mbt_msg_process(struct mbt_net_server *server,
                      struct mbt_net_client *client,
                      char buffer[MBT_NET_BUFFER_SIZE], int read)
 {
-    printf("Received message (%u bytes)\n", read);
-
-    if (!client->buffer)
+    if (buffer)
     {
-        client->buffer = xmalloc(read * sizeof(char));
-    }
-    else
-    {
-        client->buffer =
-            xrealloc(client->buffer, (client->read + read) * sizeof(char));
-    }
+        if (!client->buffer)
+        {
+            client->buffer = xcalloc(read, sizeof(char));
+        }
+        else
+        {
+            client->buffer =
+                xrealloc(client->buffer, (client->read + read) * sizeof(char));
+        }
 
-    memcpy(client->buffer + client->read, buffer, read);
-    client->read += read;
+        memcpy(client->buffer + client->read, buffer, read);
+        client->read += read;
+    }
 
     void *v_buffer = client->buffer;
     if (client->state == MBT_CLIENT_WAITING_HANDSHAKE)
@@ -145,7 +147,7 @@ bool mbt_msg_process(struct mbt_net_server *server,
             struct mbt_msg_handshake *hs = v_buffer;
             if (!mbt_msg_verify_handshake(server->ctx, *hs))
             {
-                printf("Handshake failed\n");
+                warnx("mbt_msg_verify_handshake: failed");
                 return false;
             }
 
@@ -160,7 +162,6 @@ bool mbt_msg_process(struct mbt_net_server *server,
         struct mbt_msg *msg = v_buffer;
         if (client->read < 4 || client->read < mbt_msg_length(msg) + 4)
         {
-            printf("Didnt read enough...\n");
             return true;
         }
 

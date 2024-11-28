@@ -12,6 +12,10 @@
 #define MBT_HANDSHAKE_PROTOCOL_LENGTH 19
 #define MBT_HANDSHAKE_PROTOCOL "BitTorrent protocol"
 
+#define STREAM_SUCCESS 0
+#define STREAM_FULL 1
+#define STREAM_NO_BLOCK_AVAILABLE 2
+
 struct mbt_msg_handshake
 {
     char len; // MBT_HANDSHAKE_PROTOCOL_LENGTH
@@ -58,6 +62,6 @@ void mbt_msg_write_handshake(struct mbt_net_context *ctx,
 bool mbt_msg_process(struct mbt_net_server *server,
                      struct mbt_net_client *client,
                      char buffer[MBT_NET_BUFFER_SIZE], int read)
-    MBT_NONNULL(1, 2, 3);
+    MBT_NONNULL(1, 2);
 
 #endif /* ifndef MSG_H */

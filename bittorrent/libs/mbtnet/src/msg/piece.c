@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mbt/net/fifo.h"
+
 /*
  * Algorithm:
  * 1/ Parse the message
@@ -29,6 +31,22 @@
 int mbt_msg_receive_handler_piece(struct mbt_net_server *server,
                                   struct mbt_net_client *client)
 {
+    struct mbt_net_stream *stream = NULL;
+    for (size_t i = 0; i < server->streams->size; i++)
+    {
+        stream = fifo_pop(server->streams);
+        fifo_push(server->streams, stream);
+
+        if (stream->client != client)
+        {
+            stream = NULL;
+        }
+        else
+        {
+            break;
+        }
+    }
+
     void *v_buf = client->buffer;
     struct mbt_msg *msg = v_buf;
 
@@ -62,10 +80,10 @@ int mbt_msg_receive_handler_piece(struct mbt_net_server *server,
     mbt_piece_write_block(fh, mbt_data, index, begin);
     mbt_str_free(mbt_data);
 
-    int piece_status = mbt_piece_check(fh, client->request.index);
+    int piece_status = mbt_piece_check(fh, stream->index);
     if (piece_status == MBT_PIECE_VALID)
     {
-        if (!mbt_piece_write(fh, client->request.index))
+        if (!mbt_piece_write(fh, stream->index))
         {
             errx(EXIT_FAILURE,
                  "mbt_net_msg_receive_handler_piece: Failed to write piece");

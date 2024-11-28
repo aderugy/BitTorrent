@@ -36,7 +36,7 @@ int mbt_msg_receive_handler_request(
 
 int mbt_msg_send_handler_request(
     __attribute((unused)) struct mbt_net_server *server,
-    struct mbt_net_client *client)
+    struct mbt_net_stream *stream)
 {
     printf("SENDING HANDLER REQUEST !\n");
 
@@ -49,9 +49,10 @@ int mbt_msg_send_handler_request(
     memset(buf, 0, 17);
     buf[3] = 13;
     buf[4] = MBT_MAGIC_REQUEST;
-    putain_de_sa_race(client->request.index, buf + 5);
-    putain_de_sa_race(client->request.begin, buf + 9);
-    putain_de_sa_race(client->request.length, buf + 13);
+    putain_de_sa_race(stream->index, buf + 5);
+    putain_de_sa_race(stream->begin, buf + 9);
+    putain_de_sa_race(stream->length, buf + 13);
+    stream->status = STREAM_STARTED;
 
     for (size_t i = 0; i < 17; i++)
     {
@@ -59,10 +60,10 @@ int mbt_msg_send_handler_request(
     }
     printf("\n");
 
-    int status = sendall(client->fd, buf, 17);
+    int status = sendall(stream->client->fd, buf, 17);
     if (status == 0)
     {
-        client->state = MBT_CLIENT_DOWNLOADING;
+        stream->client->state = MBT_CLIENT_DOWNLOADING;
     }
 
     MBT_HANDLER_STATUS(status);

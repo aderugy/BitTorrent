@@ -10,7 +10,7 @@
 
 int mbt_msg_send_handler_have(
     __attribute((unused)) struct mbt_net_server *server,
-    struct mbt_net_client *client)
+    struct mbt_net_stream *stream)
 {
     // Message format:
     // - Length ---- Magic Byte - Piece Index
@@ -22,9 +22,9 @@ int mbt_msg_send_handler_have(
 
     memcpy(have_msg->len, &msg_len, 4);
     have_msg->type = MBT_MAGIC_HAVE;
-    memcpy(have_msg->payload, &client->request.index, 4);
+    memcpy(have_msg->payload, &stream->index, 4);
 
-    int status = sendall(client->fd, have_msg, buf_len);
+    int status = sendall(stream->client->fd, have_msg, buf_len);
     free(have_msg);
 
     MBT_HANDLER_STATUS(status);

@@ -5,24 +5,14 @@
 #include <sys/types.h>
 
 #include "mbt/net/context.h"
+#include "mbt/net/fifo.h"
 #include "mbt/net/msg.h"
+#include "mbt/net/msg_handler.h"
 #include "mbt/net/net.h"
 #include "mbt/net/peer.h"
 #include "stdlib.h"
 #include "string.h"
 
-/*
- * Algorithm :
- * 1/ Get list of peers
- * 2/ Connect to each peer
- *      2.1/ Create a client socket
- *      2.2/ Mark it as non blocked
- *      2.3/ Add it to the EPOLL
- *  3/ Wait for events
- *      3.1/ Connect event:
- *          3.1.1/ Successful
- *              3.1.1.1/
- */
 void mbt_leech(struct mbt_net_context *ctx)
 {
     if (ctx->left == 0)
@@ -43,14 +33,9 @@ void mbt_leech(struct mbt_net_context *ctx)
     for (size_t i = 0; peers[i]; i++)
     {
         struct mbt_peer *peer = peers[i];
-        printf("for loop: try\n");
-        if (mbt_net_peer_connect(server, &clients, peer))
+        if (!mbt_net_peer_connect(server, &clients, peer))
         {
-            printf("for loop: success\n");
-        }
-        else
-        {
-            printf("Floppaid\n");
+            warnx("mbt_net_peer_connect: failed");
         }
     }
 
@@ -62,6 +47,35 @@ void mbt_leech(struct mbt_net_context *ctx)
 
     while (true)
     {
+        if (!clients)
+        {
+            exit(1);
+        }
+
+        struct mbt_net_client *head = clients;
+        while (head)
+        {
+            mbt_net_client_next_block(server, head);
+            head = head->next;
+        }
+
+        for (size_t i = 0; i < server->streams->size; i++)
+        {
+            struct mbt_net_stream *stream = fifo_pop(server->streams);
+
+            int status;
+            if (stream->status == STREAM_READY
+                && (status = mbt_msg_send_handler_request(server, stream))
+                    != MBT_HANDLER_SUCCESS)
+            {
+                warnx("mbt_msg_send_handler_request: failed");
+            }
+            else if (stream->status != STREAM_DONE)
+            {
+                fifo_push(server->streams, stream);
+            }
+        }
+
         mbt_net_server_process_event(server, &clients);
     }
 }

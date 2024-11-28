@@ -14,9 +14,11 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "bits/stdint-uintn.h"
 #include "mbt/file/file_handler.h"
 #include "mbt/file/file_types.h"
 #include "mbt/file/piece.h"
+#include "mbt/net/fifo.h"
 #include "mbt/net/msg_handler.h"
 
 const char *mbt_client_state_name(enum mbt_client_state state)
@@ -52,13 +54,60 @@ void mbt_net_clients_print(struct mbt_net_client *clients)
     mbt_net_clients_print(clients->next);
 }
 
+int mbt_net_client_next_block(struct mbt_net_server *server,
+                              struct mbt_net_client *client)
+{
+    if (server->streams->size >= MAX_STREAMS_CONCURRENT
+        || client->state != MBT_CLIENT_READY || client->choked)
+    {
+        return STREAM_FULL;
+    }
+
+    struct mbt_file_handler *fh = server->ctx->fh;
+    for (uint32_t piece_index = 0; piece_index < fh->nb_pieces; piece_index++)
+    {
+        if (!client->bitfield[piece_index])
+        {
+            continue;
+        }
+
+        struct mbt_piece *piece = fh->pieces[piece_index];
+        for (uint32_t block_index = 0; block_index < piece->nb_blocks;
+             block_index++)
+        {
+            if (piece->status[block_index] == BLOCK_STATUS_FREE)
+            {
+                struct mbt_net_stream *stream =
+                    xcalloc(1, sizeof(struct mbt_net_stream));
+
+                stream->index = piece_index;
+                stream->begin = block_index * MBT_BLOCK_SIZE;
+                stream->length = stream->begin + MBT_BLOCK_SIZE > piece->size
+                    ? piece->size % MBT_BLOCK_SIZE
+                    : MBT_BLOCK_SIZE;
+
+                piece->status[block_index] = BLOCK_STATUS_DL;
+
+                stream->client = client;
+                fifo_push(server->streams, stream);
+                return STREAM_SUCCESS;
+            }
+        }
+    }
+
+    return STREAM_NO_BLOCK_AVAILABLE;
+}
+
 int mbt_net_client_handshake(struct mbt_net_server *server,
                              struct mbt_net_client *client)
 {
     struct mbt_msg_handshake hs;
     mbt_msg_write_handshake(server->ctx, &hs);
 
+    printf("handshake start\n");
+    mbt_net_clients_print(client);
     int status = sendall(client->fd, &hs, sizeof(struct mbt_msg_handshake));
+    printf("handshake end\n");
     if (status != MBT_HANDLER_SUCCESS)
     {
         MBT_HANDLER_STATUS(status) // Return appropriate mbt handler status
@@ -66,110 +115,6 @@ int mbt_net_client_handshake(struct mbt_net_server *server,
 
     client->state = MBT_CLIENT_WAITING_HANDSHAKE;
     return MBT_HANDLER_SUCCESS;
-}
-
-/*
- * Returns the number of clients downloading a piece
- */
-static size_t mbt_net_clients_dl_piece(struct mbt_net_client **clients,
-                                       size_t piece_index)
-{
-    size_t n = 0;
-    struct mbt_net_client *current = *clients;
-
-    while (current)
-    {
-        if ((current->state == MBT_CLIENT_READY
-             || current->state == MBT_CLIENT_DOWNLOADING)
-            && current->request.index == piece_index)
-        {
-            n++;
-        }
-
-        current = current->next;
-    }
-
-    return n;
-}
-
-/*
- * Finds the next piece with the less amount of clients
- * Sets the clients request field to the right position to send request
- * If no block is found, returns false
- */
-bool mbt_net_client_next_piece(struct mbt_file_handler *fh,
-                               struct mbt_net_client **clients,
-                               struct mbt_net_client *client)
-{
-    for (size_t i = 0; i < fh->nb_pieces; i++)
-    {
-        if (fh->pieces[i]->completed)
-        {
-            continue;
-        }
-
-        struct mbt_piece *piece = fh->pieces[i];
-
-        // Index of first block of piece of index i in the bitfield
-        size_t start_blk_idx = i * MBT_PIECE_NB_BLOCK;
-        // Same for end (excluded)
-        size_t end_blk_ixd = start_blk_idx + piece->nb_blocks;
-
-        // Current block index
-        // We are checking if there is a block that isnt downloaded
-        size_t bt_idx = start_blk_idx;
-        for (; bt_idx < end_blk_ixd; bt_idx++)
-        {
-            // We ensure that there is at least one available block
-            // And that the block has not been downloaded
-            if (client->bitfield[bt_idx]
-                && !mbt_piece_block_is_received(fh, i, bt_idx - start_blk_idx))
-            {
-                break;
-            }
-        }
-
-        // Number of clients working on this piece
-        size_t n = mbt_net_clients_dl_piece(clients, i);
-        if (bt_idx < end_blk_ixd && n == 0)
-        {
-            client->request.index = bt_idx;
-            client->request.begin = bt_idx - start_blk_idx;
-            client->request.length =
-                (piece->size - client->request.begin) % MBT_BLOCK_SIZE;
-
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool mbt_net_client_next_block(struct mbt_file_handler *fh,
-                               struct mbt_net_client *client)
-{
-    struct mbt_piece *piece = fh->pieces[client->request.index];
-    if (client->request.begin + MBT_BLOCK_SIZE >= piece->size)
-    {
-        return false;
-    }
-
-    client->request.begin += MBT_BLOCK_SIZE;
-    client->request.length =
-        (piece->size - client->request.begin) % MBT_BLOCK_SIZE;
-
-    if (piece->status[client->request.begin / MBT_BLOCK_SIZE])
-    {
-        return mbt_net_client_next_block(fh, client);
-    }
-
-    client->state = MBT_CLIENT_READY;
-    if (client->buffer)
-    {
-        free(client->buffer);
-        client->buffer = NULL;
-    }
-    return true;
 }
 
 bool mbt_net_client_check_connect(struct mbt_net_client *client)
@@ -223,49 +168,41 @@ bool mbt_net_peer_connect(struct mbt_net_server *server,
         return false;
     }
 
-    struct addrinfo *addr = server->addr;
+    printf("Peer: %s:%s\n", peer->ip->data, peer->port->data);
+
     mbt_peer_init_addr(peer);
     if (!peer->addr)
     {
-        printf("Peer init ?\n");
         return false;
     }
 
-    struct addrinfo *next = addr;
+    int c_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (c_fd < 0)
+    {
+        perror(NULL);
+        warnx("socket: failed");
+        return false;
+    }
+
+    struct addrinfo *addr = peer->addr;
+    struct addrinfo *next = peer->addr;
     while (next)
     {
         addr = next;
         next = addr->ai_next;
 
-        int c_fd =
-            socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
-        if (c_fd < 0)
+        int cstatus = connect(c_fd, addr->ai_addr, addr->ai_addrlen);
+
+        if (cstatus)
         {
-            printf("Continue ?\n");
+            perror(NULL);
+            warnx("connect: failed %d", errno);
             continue;
         }
 
-        int flags = fcntl(c_fd, F_GETFL, 0);
-        fcntl(c_fd, F_SETFL, flags | O_NONBLOCK);
-
-        enum mbt_client_state state = MBT_CLIENT_WAITING_CONNECTION;
-
-        printf("We are here\n");
-        int cstatus =
-            connect(c_fd, peer->addr->ai_addr, peer->addr->ai_addrlen);
-
-        if (cstatus && errno != EINPROGRESS)
+        if (!mbt_net_clients_add(server, clients, c_fd, MBT_CLIENT_CONNECTED))
         {
-            warnx("connect: failed");
-            return false;
-        }
-        else if (cstatus == 0)
-        {
-            state = MBT_CLIENT_CONNECTED;
-        }
-
-        if (!mbt_net_clients_add(server, clients, c_fd, state))
-        {
+            perror(NULL);
             warnx("mbt_net_clients_add: failed");
             close(c_fd);
             continue;
@@ -281,7 +218,6 @@ bool mbt_net_clients_remove(struct mbt_net_server *server,
                             struct mbt_net_client **clients, int client_fd,
                             bool close_fd)
 {
-    printf("Removing client...\n");
     if (!*clients)
     {
         return false;
@@ -293,6 +229,7 @@ bool mbt_net_clients_remove(struct mbt_net_server *server,
                                       close_fd);
     }
 
+    printf("Removing client %d (error = %d)\n", client_fd, close_fd);
     struct mbt_net_client *current = *clients;
     struct mbt_net_client *next = current->next;
     if (current->buffer)

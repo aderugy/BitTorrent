@@ -51,7 +51,7 @@ void mbt_piece_dtor(struct mbt_piece *p)
         p->h = NULL;
     }
 
-    memset(p->status, 0, MBT_PIECE_NB_BLOCK * sizeof(bool));
+    memset(p->status, 0, MBT_PIECE_NB_BLOCK * sizeof(int));
 }
 
 const char *mbt_piece_get_data(struct mbt_file_handler *fh, size_t piece_index)
@@ -174,7 +174,6 @@ bool mbt_piece_write(struct mbt_file_handler *fh, size_t piece_index)
 
     free(piece->data);
     piece->data = NULL;
-
     piece->completed = true;
     return true;
 }

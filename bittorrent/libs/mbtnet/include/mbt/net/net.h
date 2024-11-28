@@ -2,12 +2,20 @@
 #define NET_H
 
 #include <mbt/file/file_types.h>
+#include <mbt/net/fifo.h>
 #include <mbt/net/net_types.h>
 #include <mbt/utils/utils.h>
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "bits/stdint-uintn.h"
+
 #define MBT_NET_BUFFER_SIZE 1024
+#define MAX_STREAMS_CONCURRENT 4
+
+#define STREAM_READY 0
+#define STREAM_STARTED 1
+#define STREAM_DONE 2
 
 enum mbt_client_state
 {
@@ -21,22 +29,6 @@ enum mbt_client_state
     MBT_CLIENT_COMPLETED // Back to MBT_CLIENT_REQUESTING
 };
 
-struct mbt_net_request
-{
-    uint32_t index;
-    uint32_t begin;
-    uint32_t length;
-};
-
-struct mbt_net_server
-{
-    int ep_fd;
-
-    struct addrinfo *addr;
-
-    struct mbt_net_context *ctx;
-};
-
 struct mbt_net_client
 {
     int fd;
@@ -48,16 +40,36 @@ struct mbt_net_client
     bool *bitfield;
     enum mbt_client_state state;
 
-    struct mbt_net_request request;
-
     struct mbt_net_client *next;
+};
+
+struct mbt_net_stream
+{
+    uint32_t index;
+    uint32_t begin;
+    uint32_t length;
+
+    int status;
+    struct mbt_net_client *client;
+};
+
+struct mbt_net_server
+{
+    int ep_fd;
+
+    struct addrinfo *addr;
+    struct mbt_net_context *ctx;
+    struct fifo *streams;
 };
 
 // SERVER FUNCTIONS
 struct addrinfo *mbt_getaddrinfo(char *ip, char *port);
 
-bool mbt_net_client_next_block(struct mbt_file_handler *fh,
-                               struct mbt_net_client *client) MBT_NONNULL(1, 2);
+int mbt_net_client_next_block(struct mbt_net_server *server,
+                              struct mbt_net_client *client) MBT_NONNULL(1, 2);
+
+int mbt_net_client_start_stream(struct mbt_net_server *server,
+                                struct mbt_net_stream *stream);
 
 struct mbt_net_server *mbt_net_server_init(struct mbt_net_context *ctx);
 void mbt_net_server_free(struct mbt_net_server *server);
@@ -67,9 +79,9 @@ void mbt_net_server_free(struct mbt_net_server *server);
 int mbt_net_client_handshake(struct mbt_net_server *server,
                              struct mbt_net_client *client) MBT_NONNULL(1, 2);
 
-bool mbt_net_client_next_piece(struct mbt_file_handler *fh,
-                               struct mbt_net_client **clients,
-                               struct mbt_net_client *client);
+int mbt_net_client_next_piece(struct mbt_file_handler *fh,
+                              struct mbt_net_client **clients,
+                              struct mbt_net_client *client);
 
 void mbt_net_clients_print(struct mbt_net_client *clients);
 
