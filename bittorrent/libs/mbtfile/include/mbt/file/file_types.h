@@ -4,7 +4,6 @@
 #include <mbt/be/types_mbtbe.h>
 #include <mbt/file/file_handler.h>
 
-#include "bits/stdint-uintn.h"
 #include "mbt/utils/utils.h"
 
 #define MBT_H_LENGTH 20
@@ -16,9 +15,17 @@ struct mbt_file_handler
 {
     struct mbt_str *h;
     struct mbt_str *name;
+    struct mbt_files_info **files_info;
 
     size_t nb_pieces;
     struct mbt_piece **pieces;
+};
+
+struct mbt_files_info
+{
+    struct mbt_str **path;
+    size_t path_length;
+    size_t size;
 };
 
 struct mbt_block
