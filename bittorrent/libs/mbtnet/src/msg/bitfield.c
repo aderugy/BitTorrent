@@ -31,16 +31,13 @@ int mbt_msg_receive_handler_bitfield(
     struct mbt_msg *msg = v_msg;
 
     uint32_t bytes = mbt_msg_length(msg) - 1;
-    client->bitfield = xcalloc(8 * bytes + 1, sizeof(bool));
+    client->bitfield = xcalloc(bytes + 1, sizeof(bool));
 
     for (uint32_t i = 0; i < bytes; i++)
     {
-        for (size_t j = 0; j < 8; j++)
-        {
-            client->bitfield[i * 8 + j] =
-                (msg->payload[i] & (1 << (7 - j))) > 0;
-            printf("%c", client->bitfield[i * 8 + j] ? '1' : '0');
-        }
+        client->bitfield[i] = (msg->payload[i] & (1 << (bytes - i - 1))) > 0;
+
+        printf("%c", client->bitfield[i] ? '1' : '0');
         printf(" ");
     }
     printf("\n\n");

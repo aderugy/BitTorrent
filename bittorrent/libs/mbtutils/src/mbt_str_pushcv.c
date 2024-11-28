@@ -1,5 +1,5 @@
-#include <mbt/utils/view.h>
 #include <mbt/utils/str.h>
+#include <mbt/utils/view.h>
 #include <stdbool.h>
 #include <stddef.h>
 

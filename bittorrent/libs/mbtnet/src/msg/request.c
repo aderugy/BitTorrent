@@ -62,7 +62,7 @@ int mbt_msg_send_handler_request(
     int status = sendall(client->fd, buf, 17);
     if (status == 0)
     {
-        client->state = MBT_CLIENT_DOWNLOADED;
+        client->state = MBT_CLIENT_DOWNLOADING;
     }
 
     MBT_HANDLER_STATUS(status);

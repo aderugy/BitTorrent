@@ -34,6 +34,7 @@ struct mbt_piece
 
     bool completed;
     bool status[MBT_PIECE_NB_BLOCK];
+
     struct mbt_block *data;
 };
 
@@ -41,5 +42,7 @@ struct mbt_piece *mbt_piece_init(char *h);
 bool mbt_piece_write_block(struct mbt_file_handler *fh, struct mbt_str *data,
                            uint32_t piece_index, uint32_t piece_offset)
     MBT_NONNULL(1, 2);
+
+void mbt_piece_reset(struct mbt_piece *piece);
 
 #endif // !FILE_TYPES_H

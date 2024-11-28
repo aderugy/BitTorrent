@@ -52,6 +52,6 @@ int mbt_msg_send_handler_interested(
     }
     printf("\n");
 
-    client->state = MBT_CLIENT_REQUESTING;
+    client->state = MBT_CLIENT_READY;
     MBT_HANDLER_STATUS(sendall(client->fd, payload, 5));
 }

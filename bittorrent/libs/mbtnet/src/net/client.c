@@ -21,16 +21,12 @@
 
 const char *mbt_client_state_name(enum mbt_client_state state)
 {
-    static const char *client_states[10] = { "MBT_CLIENT_WAITING_CONNECTION",
-                                             "MBT_CLIENT_CONNECTED",
-                                             "MBT_CLIENT_WAITING_HANDSHAKE",
-                                             "MBT_CLIENT_HANDSHAKEN",
-                                             "MBT_CLIENT_BITFIELD_RECEIVED",
-                                             "MBT_CLIENT_REQUESTING",
-                                             "MBT_CLIENT_DOWNLOADED",
-                                             "MBT_CLIENT_COMPLETED",
-                                             "MBT_CLIENT_ERROR",
-                                             "MBT_CLIENT_DISCONNECTED" };
+    static const char *client_states[8] = {
+        "MBT_CLIENT_WAITING_CONNECTION", "MBT_CLIENT_CONNECTED",
+        "MBT_CLIENT_WAITING_HANDSHAKE",  "MBT_CLIENT_HANDSHAKEN",
+        "MBT_CLIENT_BITFIELD_RECEIVED",  "MBT_CLIENT_READY",
+        "MBT_CLIENT_DOWNLOADING",        "MBT_CLIENT_COMPLETED",
+    };
 
     return client_states[state];
 }
@@ -83,8 +79,8 @@ static size_t mbt_net_clients_dl_piece(struct mbt_net_client **clients,
 
     while (current)
     {
-        if ((current->state == MBT_CLIENT_REQUESTING
-             || current->state == MBT_CLIENT_DOWNLOADED)
+        if ((current->state == MBT_CLIENT_READY
+             || current->state == MBT_CLIENT_DOWNLOADING)
             && current->request.index == piece_index)
         {
             n++;
@@ -167,7 +163,7 @@ bool mbt_net_client_next_block(struct mbt_file_handler *fh,
         return mbt_net_client_next_block(fh, client);
     }
 
-    client->state = MBT_CLIENT_REQUESTING;
+    client->state = MBT_CLIENT_READY;
     if (client->buffer)
     {
         free(client->buffer);

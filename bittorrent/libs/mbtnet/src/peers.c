@@ -14,7 +14,6 @@
 #include "arpa/inet.h"
 #include "bits/stdint-uintn.h"
 #include "mbt/net/net.h"
-#include "netdb.h"
 
 struct curl_data
 {

@@ -16,11 +16,9 @@ enum mbt_client_state
     MBT_CLIENT_WAITING_HANDSHAKE,
     MBT_CLIENT_HANDSHAKEN, // Waiting for bitfield
     MBT_CLIENT_BITFIELD_RECEIVED, // Waiting for unchoked
-    MBT_CLIENT_REQUESTING, // Waiting for first block
-    MBT_CLIENT_DOWNLOADED, // Waiting for full piece
-    MBT_CLIENT_COMPLETED, // Back to MBT_CLIENT_REQUESTING
-    MBT_CLIENT_ERROR, // SEGPIPE
-    MBT_CLIENT_DISCONNECTED // CLEAN EXIT
+    MBT_CLIENT_READY, // Waiting for first block
+    MBT_CLIENT_DOWNLOADING, // Waiting for full piece
+    MBT_CLIENT_COMPLETED // Back to MBT_CLIENT_REQUESTING
 };
 
 struct mbt_net_request
@@ -35,6 +33,7 @@ struct mbt_net_server
     int ep_fd;
 
     struct addrinfo *addr;
+
     struct mbt_net_context *ctx;
 };
 
@@ -50,6 +49,7 @@ struct mbt_net_client
     enum mbt_client_state state;
 
     struct mbt_net_request request;
+
     struct mbt_net_client *next;
 };
 

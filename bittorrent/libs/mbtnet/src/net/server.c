@@ -106,7 +106,7 @@ static int mbt_net_server_process_out_events(struct mbt_net_server *server,
         }
     }
 
-    if (status == MBT_HANDLER_SUCCESS && client->state == MBT_CLIENT_REQUESTING
+    if (status == MBT_HANDLER_SUCCESS && client->state == MBT_CLIENT_READY
         && !client->choked)
     {
         // Connection got unchoked
