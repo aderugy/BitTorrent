@@ -51,5 +51,6 @@ bool mbt_piece_write_block(struct mbt_file_handler *fh, struct mbt_str *data,
     MBT_NONNULL(1, 2);
 
 void mbt_piece_reset(struct mbt_piece *piece);
+void mbt_fh_print(struct mbt_file_handler *fh);
 
 #endif // !FILE_TYPES_H

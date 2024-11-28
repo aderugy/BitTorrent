@@ -177,11 +177,9 @@ bool write_in_file(const char *path, const char *start_data,
     {
         return false;
     }
-    printf("%s\n", path);
 
     for (const char *i = start_data; i < end_data; i++)
     {
-        printf("%c\n", *i);
         fputc(*i, file);
     }
     fclose(file);

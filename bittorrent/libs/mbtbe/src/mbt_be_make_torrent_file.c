@@ -18,6 +18,40 @@
 #include "mbt/be/bencode.h"
 #include "mbt/utils/view.h"
 
+void get_pieces_string_buff(struct mbt_str data, struct mbt_str *sha1_mbt)
+{
+    for (size_t i = 0; i < data.size; i += 256 * 1024)
+    {
+        size_t remaining_size = data.size - i;
+
+        if (remaining_size < 256 * 1024)
+        {
+            char *sha1_str = sha1(data.data + i, remaining_size);
+            for (size_t i = 0; i < 20; i++)
+            {
+                if (!mbt_str_pushc(sha1_mbt, *(sha1_str + i)))
+                {
+                    errx(1, "sha1 pushc");
+                }
+            }
+            free(sha1_str);
+            break;
+        }
+        else
+        {
+            char *sha1_str = sha1(data.data + i, 256 * 1024);
+            for (size_t i = 0; i < 20; i++)
+            {
+                if (!mbt_str_pushc(sha1_mbt, *(sha1_str + i)))
+                {
+                    errx(1, "sha1 pushc");
+                }
+            }
+            free(sha1_str);
+        }
+    }
+}
+
 void get_pieces_string(const char *path, struct mbt_str *sha1_mbt)
 {
     struct mbt_str data;
@@ -34,6 +68,7 @@ void get_pieces_string(const char *path, struct mbt_str *sha1_mbt)
     for (size_t i = 0; i < data.size; i += 256 * 1024)
     {
         size_t remaining_size = data.size - i;
+
         if (remaining_size < 256 * 1024)
         {
             char *sha1_str = sha1(data.data + i, remaining_size);
@@ -147,6 +182,7 @@ struct mbt_be_pair *get_path_of_file(char *path)
         if (strcmp(".", token) == 0)
         {
             token = strtok(NULL, "/");
+            token = strtok(NULL, "/");
             continue;
         }
         struct mbt_str str;
@@ -218,9 +254,11 @@ void fill_pieces_and_file_length_rec(char *path, struct mbt_str *pieces,
     {
         return;
     }
-    struct dirent *dir;
-    while ((dir = readdir(d)) != NULL)
+    struct dirent **files;
+    int n = scandir(path, &files, 0, alphasort);
+    while (n--)
     {
+        struct dirent *dir = files[n];
         if (dir->d_type == DT_REG)
         {
             char *file_path = calloc(1, strlen(path) + strlen(dir->d_name) + 1);
@@ -235,12 +273,9 @@ void fill_pieces_and_file_length_rec(char *path, struct mbt_str *pieces,
                 errx(1, "fill pieces rec : cannot init sha1_mbt");
             }
 
-            get_pieces_string(file_path, sha1_mbt);
+            // get_pieces_string(file_path, sha1_mbt);
 
-            if (!mbt_str_pushcstr(pieces, sha1_mbt->data))
-            {
-                errx(1, "fill pieces rec : cannot pushcstr");
-            }
+            mbt_str_read_file(file_path, pieces);
 
             mbt_str_dtor(sha1_mbt);
             free(sha1_mbt);
@@ -250,6 +285,7 @@ void fill_pieces_and_file_length_rec(char *path, struct mbt_str *pieces,
         {
             if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0)
             {
+        free(files[n]);
                 continue;
             }
             char *new_path = calloc(1, strlen(path) + strlen(dir->d_name) + 2);
@@ -260,7 +296,9 @@ void fill_pieces_and_file_length_rec(char *path, struct mbt_str *pieces,
             fill_pieces_and_file_length_rec(new_path, pieces, size);
             free(new_path);
         }
+        free(files[n]);
     }
+    free(files);
     closedir(d);
 }
 
@@ -276,9 +314,12 @@ void fill_d_files_rec(char *path, struct mbt_be_node ***d_files)
     {
         return;
     }
-    struct dirent *dir;
-    while ((dir = readdir(d)) != NULL)
+    struct dirent **files;
+    int n = scandir(path, &files, 0, alphasort);
+    while (n--)
     {
+        struct dirent *dir = files[n];
+
         if (dir->d_type == DT_REG)
         {
             char *file_path = calloc(1, strlen(path) + strlen(dir->d_name) + 1);
@@ -292,6 +333,7 @@ void fill_d_files_rec(char *path, struct mbt_be_node ***d_files)
         {
             if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0)
             {
+                free(files[n]);
                 continue;
             }
             char *new_path = calloc(1, strlen(path) + strlen(dir->d_name) + 2);
@@ -302,7 +344,9 @@ void fill_d_files_rec(char *path, struct mbt_be_node ***d_files)
             fill_d_files_rec(new_path, d_files);
             free(new_path);
         }
+        free(files[n]);
     }
+    free(files);
     closedir(d);
 }
 
@@ -342,10 +386,19 @@ struct mbt_be_pair *get_pieces_dir(const char *path, uint64_t *size)
     strcat(new_path, path);
 
     fill_pieces_and_file_length_rec(new_path, &pieces, size);
+
+    struct mbt_str sha;
+    if (!mbt_str_ctor(&sha, 64))
+    {
+        errx(1, "mbt_str_ctor");
+    }
+    get_pieces_string_buff(pieces, &sha);
+
     free(new_path);
-    struct mbt_be_node *node = mbt_be_str_init(MBT_CVIEW_OF(pieces));
+    struct mbt_be_node *node = mbt_be_str_init(MBT_CVIEW_OF(sha));
     struct mbt_be_pair *pair = transform_to_pair(node, "pieces");
     mbt_str_dtor(&pieces);
+    mbt_str_dtor(&sha);
     return pair;
 };
 struct mbt_be_pair *get_pieces(const char *path)
@@ -439,7 +492,10 @@ bool mbt_be_make_torrent_file(const char *path)
 
     mbt_str_pushcstr(&path_mbt, ".torrent");
     fptr = fopen(path_mbt.data, "w");
-    fputs(buffer.data, fptr);
+    for (size_t i = 0; i < buffer.size; i++)
+    {
+        fputc(buffer.data[i], fptr);
+    }
     fclose(fptr);
 
     mbt_str_dtor(&data);
