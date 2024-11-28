@@ -6,6 +6,68 @@
 #include <mbt/utils/xalloc.h>
 #include <string.h>
 
+#include "err.h"
+#include "mbt/be/types_mbtbe.h"
+#include "stdio.h"
+
+void copy_files_dir(struct mbt_file_handler *file_handler,
+                    struct mbt_torrent *torrent)
+{
+    size_t s = 0;
+
+    while (torrent->info->files[s])
+    {
+        s++;
+    }
+
+    file_handler->files_info = xcalloc(s + 1, sizeof(struct mbt_files_info));
+
+    for (size_t i = 0; torrent->info->files[i]; i++)
+    {
+        struct mbt_files_info *info = file_handler->files_info[i];
+        struct mbt_torrent_file *file = torrent->info->files[i];
+        info->size = file->length;
+        for (size_t p = 0; file->path[p]; p++)
+        {
+            struct mbt_str *str = xcalloc(1, sizeof(struct mbt_str));
+            if (!mbt_str_ctor(str, 64))
+            {
+                errx(1, "ctor copy file");
+            }
+            if (!mbt_str_pushcstr(str, file->path[p]->data))
+            {
+                errx(1, "pushcstr");
+            }
+        }
+    }
+}
+
+void copy_file_single(struct mbt_file_handler *file_handler,
+                      struct mbt_torrent *torrent)
+{
+    file_handler->files_info = xcalloc(2, sizeof(struct mbt_files_info *));
+    file_handler->files_info[0] = xcalloc(1, sizeof(struct mbt_files_info));
+
+    struct mbt_files_info *info = file_handler->files_info[0];
+
+    info->size = torrent->info->length;
+    info->path_length = 1;
+
+    struct mbt_str *str = xcalloc(1, sizeof(struct mbt_str));
+
+    if (!mbt_str_ctor(str, 64))
+    {
+        errx(1, "ctor");
+    }
+
+    if (!mbt_str_pushcstr(str, torrent->info->name->data))
+    {
+        errx(1, "puscstr");
+    }
+    info->path = xcalloc(2, sizeof(struct mbt_str));
+    info->path[0] = str;
+}
+
 struct mbt_file_handler *mbt_file_handler_init(struct mbt_torrent *torrent)
 {
     struct mbt_file_handler *fh = xcalloc(1, sizeof(struct mbt_file_handler));
@@ -50,6 +112,14 @@ struct mbt_file_handler *mbt_file_handler_init(struct mbt_torrent *torrent)
         }
 
         fh->pieces[i] = piece;
+    }
+    if (torrent->is_dir)
+    {
+        copy_files_dir(fh, torrent);
+    }
+    else
+    {
+        copy_file_single(fh, torrent);
     }
 
     return fh;

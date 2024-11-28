@@ -7,10 +7,12 @@
 #include <mbt/utils/xalloc.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "ctype.h"
 #include "mbt/file/file_handler.h"
 #include "mbt/file/piece.h"
+#include "stdio.h"
 
 struct mbt_piece *mbt_piece_init(char *h)
 {
@@ -79,7 +81,7 @@ void mbt_piece_set_data(struct mbt_file_handler *fh, size_t piece_index,
     }
 
     struct mbt_piece *piece = fh->pieces[piece_index];
-    memcpy(&(piece->data), data, size);
+    memcpy((piece->data), data, size);
 }
 
 bool mbt_compare_hashes(struct mbt_file_handler *fh, size_t piece_index,
@@ -151,7 +153,70 @@ enum mbt_piece_status mbt_piece_check(struct mbt_file_handler *fh,
     return res ? MBT_PIECE_VALID : MBT_PIECE_INVALID;
 }
 
+char *create_path(struct mbt_str **path, size_t path_length)
+{
+    char *copy = calloc(64, sizeof(char));
+    for (size_t i = 0; i < path_length - 1; i++)
+    {
+        mkdir(path[i]->data, 0777);
+        strcat(copy, path[i]->data);
+    }
+
+    strcat(copy, path[path_length - 1]->data);
+
+    strcat(copy, "t");
+    return copy;
+}
+
+bool write_in_file(const char *path, const char *start_data,
+                   const char *end_data)
+{
+    FILE *file = fopen(path, "w");
+
+    if (!file)
+    {
+        return false;
+    }
+    printf("%s\n", path);
+
+    for (const char *i = start_data; i < end_data; i++)
+    {
+        printf("%c\n", *i);
+        fputc(*i, file);
+    }
+    fclose(file);
+
+    return true;
+}
+
 bool mbt_piece_write(struct mbt_file_handler *fh, size_t piece_index)
+{
+    if (fh->nb_pieces <= piece_index)
+    {
+        return false;
+    }
+    size_t read_piece_size = 0;
+    for (size_t i = 0; fh->files_info[i]; i++)
+    {
+        char *path = create_path(fh->files_info[i]->path,
+                                 fh->files_info[i]->path_length);
+        if (!path)
+        {
+            return false;
+        }
+
+        const char *start_data =
+            mbt_piece_get_data(fh, piece_index) + read_piece_size;
+        const char *end_data = start_data + fh->files_info[i]->size;
+
+        if (!write_in_file(path, start_data, end_data))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+/*bool mbt_piece_write(struct mbt_file_handler *fh, size_t piece_index)
 {
     if (fh->nb_pieces <= piece_index)
     {
@@ -177,7 +242,7 @@ bool mbt_piece_write(struct mbt_file_handler *fh, size_t piece_index)
 
     piece->completed = true;
     return true;
-}
+}*/
 
 bool mbt_piece_write_block(struct mbt_file_handler *fh, struct mbt_str *data,
                            uint32_t piece_index, uint32_t piece_offset)

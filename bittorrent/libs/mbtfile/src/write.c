@@ -16,7 +16,7 @@ char *create_path(struct mbt_str **path, size_t path_length)
         mkdir(path[i]->data, 0777);
         strcat(copy, path[i]->data);
     }
-
+    strcat(copy, "t");
     return copy;
 }
 
@@ -40,6 +40,10 @@ bool write_in_file(const char *path, const char *start_data,
 
 bool mbt_piece_write(struct mbt_file_handler *fh, size_t piece_index)
 {
+    if (fh->nb_pieces <= piece_index)
+    {
+        return false;
+    }
     size_t read_piece_size = 0;
     for (size_t i = 0; fh->files_info[i]; i++)
     {
