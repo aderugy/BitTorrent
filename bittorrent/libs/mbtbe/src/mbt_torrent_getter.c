@@ -73,3 +73,13 @@ size_t mbt_torrent_files_size(const struct mbt_torrent *torrent)
     }
     return i;
 }
+
+bool mbt_torrent_is_dir(const struct mbt_torrent *torrent)
+{
+    return torrent->is_dir;
+}
+
+const struct mbt_be_node *mbt_torrent_node(const struct mbt_torrent *torrent)
+{
+    return torrent->root;
+}

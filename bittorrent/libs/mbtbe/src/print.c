@@ -8,6 +8,9 @@ void mbt_torrent_print(struct mbt_torrent *torrent, int mode)
     printf("\t\"announce\" : \"%s\"\n", mbt_torrent_announce(torrent).data);
 
     printf("\t\"created_by\" : \"%s\"\n", mbt_torrent_created_by(torrent).data);
+    printf("\t\"isdir\" : \"%s\"",
+           mbt_torrent_is_dir(torrent) ? "true" : "false");
+    printf("\n");
     printf("\t\"creation_date\" : %zu\n", torrent->creation_date);
     printf("\t\"info\" : \n\t{\n");
 
@@ -21,6 +24,7 @@ void mbt_torrent_print(struct mbt_torrent *torrent, int mode)
         printf("%02X", c);
     }
     printf("\n");
+
     if (mode == 1)
     {
         printf("\t\t\"files\" :\n");

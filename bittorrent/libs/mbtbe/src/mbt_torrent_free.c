@@ -2,6 +2,7 @@
 #include <mbt/be/types_mbtbe.h>
 #include <mbt/utils/str.h>
 #include <stdlib.h>
+#include "mbt/be/bencode.h"
 
 void delocate_info(struct info *info)
 {
@@ -46,6 +47,10 @@ void mbt_torrent_free(struct mbt_torrent *torrent)
     if (torrent->created_by)
     {
         mbt_str_free(torrent->created_by);
+    }
+    if (torrent->root)
+    {
+        mbt_be_free(torrent->root);
     }
     free(torrent);
 }

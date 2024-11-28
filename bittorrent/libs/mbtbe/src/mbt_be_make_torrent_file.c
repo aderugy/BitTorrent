@@ -37,10 +37,12 @@ void get_pieces_string(const char *path, struct mbt_str *sha1_mbt)
         if (remaining_size < 256 * 1024)
         {
             char *sha1_str = sha1(data.data + i, remaining_size);
-            if (!mbt_str_pushcstr(sha1_mbt, sha1_str))
+            for (size_t i = 0; i < 20; i++)
             {
-                mbt_str_free(sha1_mbt);
-                return;
+                if (!mbt_str_pushc(sha1_mbt, *(sha1_str + i)))
+                {
+                    errx(1, "sha1 pushc");
+                }
             }
             free(sha1_str);
             break;
@@ -48,11 +50,12 @@ void get_pieces_string(const char *path, struct mbt_str *sha1_mbt)
         else
         {
             char *sha1_str = sha1(data.data + i, 256 * 1024);
-
-            if (!mbt_str_pushcstr(sha1_mbt, sha1_str))
+            for (size_t i = 0; i < 20; i++)
             {
-                mbt_str_free(sha1_mbt);
-                return;
+                if (!mbt_str_pushc(sha1_mbt, *(sha1_str + i)))
+                {
+                    errx(1, "sha1 pushc");
+                }
             }
             free(sha1_str);
         }
@@ -146,7 +149,6 @@ struct mbt_be_pair *get_path_of_file(char *path)
             token = strtok(NULL, "/");
             continue;
         }
-        printf("token : %s\n", token);
         struct mbt_str str;
         if (!mbt_str_ctor(&str, 64))
         {

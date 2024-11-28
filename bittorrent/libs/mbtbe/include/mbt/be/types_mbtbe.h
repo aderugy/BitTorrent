@@ -3,6 +3,8 @@
 
 #include <mbt/utils/str.h>
 #include <stddef.h>
+
+#include "mbt/be/bencode.h"
 struct mbt_torrent_file
 {
     struct mbt_str **path;
@@ -17,6 +19,8 @@ struct mbt_torrent
     struct mbt_str *created_by;
     size_t creation_date;
     struct info *info;
+    struct mbt_be_node *root;
+    bool is_dir;
 };
 
 struct info

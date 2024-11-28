@@ -124,7 +124,7 @@ bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
             }
             else if (strcmp(key.data, "files") == 0)
             {
-                printf("handling files\n");
+                torrent->is_dir = true;
                 handle_files_list(torrent, val, i);
             }
             else
@@ -187,7 +187,7 @@ bool mbt_be_parse_torrent_file(const char *path, struct mbt_torrent *torrent)
         }
     }
 
-    mbt_be_free(node);
+    torrent->root = node;
     mbt_str_dtor(&data);
 
     return true;
