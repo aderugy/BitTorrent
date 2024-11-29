@@ -119,8 +119,7 @@ struct mbt_be_pair *get_announce(void)
         errx(1, "get announce : cannot ctor");
         return NULL;
     }
-    mbt_str_pushcstr(&announce,
-                     "http://torrent.pie.cri.epita.fr:8000/announce");
+    mbt_str_pushcstr(&announce, "http://localhost:6969/announce");
     struct mbt_be_node *node = mbt_be_str_init(MBT_CVIEW_OF(announce));
 
     struct mbt_be_pair *pair = transform_to_pair(node, "announce");
