@@ -10,12 +10,20 @@
 
 char *parse_path_get_file_name(const char *path)
 {
-    char *file_name = strrchr(path, '/');
+    char *copy = calloc(strlen(path) + 1, sizeof(char));
+
+    for (size_t i = 0; *(path + i); i++)
+    {
+        copy[i] = path[i];
+    }
+
+    char *file_name = basename(copy);
     if (file_name == NULL)
     {
         return NULL;
     }
-    return file_name + 1;
+
+    return file_name;
 }
 
 struct mbt_str *parse_path_get_dir_name(const char *path)

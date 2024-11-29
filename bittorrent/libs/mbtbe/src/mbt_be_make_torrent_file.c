@@ -485,6 +485,7 @@ bool mbt_be_make_torrent_file(const char *path)
     {
         char *file_name = parse_path_get_file_name(path);
         mbt_str_pushcstr(&path_mbt, file_name);
+        free(file_name);
     }
 
     mbt_str_pushcstr(&path_mbt, ".torrent");

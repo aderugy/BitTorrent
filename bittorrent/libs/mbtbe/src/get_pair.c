@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
 #include "stdio.h"
 
 bool is_dir(const char *path)
@@ -83,6 +84,7 @@ struct mbt_be_pair *get_name(const char *path)
             mbt_str_free(&name);
             return NULL;
         }
+        free(name_str);
     }
 
     struct mbt_be_node *node = mbt_be_str_init(MBT_CVIEW_OF(name));
