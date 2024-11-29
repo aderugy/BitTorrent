@@ -33,15 +33,12 @@ void mbt_leech(struct mbt_net_context *ctx)
     for (size_t i = 0; peers[i]; i++)
     {
         struct mbt_peer *peer = peers[i];
-        if (!mbt_net_peer_connect(server, &clients, peer))
-        {
-            warnx("mbt_net_peer_connect: failed");
-        }
+        mbt_net_peer_connect(server, &clients, peer);
     }
 
     for (size_t i = 0; peers[i]; i++)
     {
-        free(peers[i]);
+        mbt_peer_free(peers[i]);
     }
     free(peers);
 
@@ -49,7 +46,8 @@ void mbt_leech(struct mbt_net_context *ctx)
     {
         if (!clients)
         {
-            exit(1);
+            mbt_net_server_free(server);
+            exit(1); // Status code should be 0 if piece was downloaded
         }
 
         struct mbt_net_client *head = clients;

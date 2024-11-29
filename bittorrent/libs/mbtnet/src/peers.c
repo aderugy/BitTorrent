@@ -13,6 +13,7 @@
 
 #include "arpa/inet.h"
 #include "bits/stdint-uintn.h"
+#include "ctype.h"
 #include "mbt/net/net.h"
 
 struct curl_data
@@ -34,77 +35,35 @@ static size_t cb(void *data, size_t size, size_t nmemb, void *clientp)
     mem->size += realsize;
     mem->response[mem->size] = 0;
 
+    for (size_t i = 0; i < size * nmemb; i++)
+    {
+        unsigned char c = mem->response[i];
+
+        if (isprint(c))
+        {
+            printf("%c", c);
+        }
+        else
+        {
+            printf(" %02X ", c);
+        }
+    }
+    printf("\n");
+
     return realsize;
-}
-
-// Adds an int URL Search param to the given url. Frees the old one
-static char *add_iparam(__attribute((unused)) CURL *curl, char *src,
-                        const char *name, int value, bool is_first)
-{
-    char *out = NULL;
-
-    asprintf(&out, "%s%s%s=%d", src, is_first ? "?" : "&", name, value);
-    free(src);
-
-    return out;
-}
-
-// Adds a str URL Search param to the given url. Frees the old one
-static char *add_param(CURL *curl, char *src, const char *name, char *value,
-                       bool is_first)
-{
-    if (!value)
-    {
-        return src;
-    }
-
-    char *out;
-    // URL Encoding of param value
-    char *encoded_value = curl_easy_escape(curl, value, strlen(value));
-
-    asprintf(&out, "%s%s%s=%s", src, is_first ? "?" : "&", name, encoded_value);
-    free(encoded_value);
-    free(src);
-
-    return out;
-}
-
-static char *get_event_value(enum tracker_event event)
-{
-    switch (event)
-    {
-    case TRACKER_EMPTY:
-        return "";
-    case TRACKER_STARTED:
-        return "started";
-    case TRACKER_COMPLETED:
-        return "completed";
-    case TRACKER_STOPPED:
-        return "stopped";
-    }
-
-    errx(EXIT_FAILURE, "get_event_value: no such event");
 }
 
 static char *get_tracker_url(CURL *curl, struct mbt_net_context *ctx)
 {
-    char *params = calloc(1, sizeof(char)); // Search params
-    params = add_iparam(curl, params, "left", ctx->left, true);
-    params =
-        add_param(curl, params, "event", get_event_value(ctx->event), false);
-    params = add_iparam(curl, params, "uploaded", ctx->uploaded, false);
-    params = add_iparam(curl, params, "downloaded", ctx->downloaded, false);
-    params = add_iparam(curl, params, "no_peer_id", 1, false);
-
-    params = add_param(curl, params, "ip", ctx->ip, false);
-    params = add_param(curl, params, "port", ctx->port, false);
-    params = add_param(curl, params, "peer_id", ctx->peer_id, false);
-    params = add_param(curl, params, "info_hash", ctx->info_hash, false);
+    char *info_hash = curl_easy_escape(curl, ctx->info_hash, 20);
+    char *peer_id = curl_easy_escape(curl, ctx->peer_id, 20);
 
     char *url; // Full URL
-    asprintf(&url, "%s%s", ctx->announce, params);
+    asprintf(&url, "%s?info_hash=%s&peer_id=%s&ip=%s&port=%s", ctx->announce,
+             info_hash, peer_id, ctx->ip, ctx->port);
 
-    free(params);
+    free(info_hash);
+    free(peer_id);
     return url;
 }
 

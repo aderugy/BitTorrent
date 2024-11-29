@@ -59,6 +59,13 @@ void mbt_net_server_free(struct mbt_net_server *server)
 {
     freeaddrinfo(server->addr);
     mbt_net_context_free(server->ctx);
+
+    while (server->streams->size)
+    {
+        free(fifo_pop(server->streams));
+    }
+    fifo_destroy(server->streams);
+
     free(server);
 }
 

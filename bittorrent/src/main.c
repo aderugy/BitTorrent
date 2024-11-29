@@ -2,6 +2,7 @@
 
 #include <err.h>
 #include <getopt.h>
+#include <mbt/utils/logger.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,7 +47,9 @@ int main(int argc, char *argv[])
             options.port = optarg;
             break;
         case 'v':
-            options.flags |= OPTION_VERBOSE;
+            logger("Test %s\n", "hello");
+            logger(NULL, NULL);
+            logger("Test %s\n", "hello");
             break;
         case 'P':
             options.flags |= OPTION_PRETTY_PRINT;
