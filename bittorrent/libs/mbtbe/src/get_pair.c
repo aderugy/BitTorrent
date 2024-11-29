@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include "stdio.h"
 
 bool is_dir(const char *path)
 {
@@ -42,11 +43,11 @@ uint64_t get_file_size(const char *filename)
     struct stat st;
     if (stat(filename, &st) != 0)
     {
-        errx(1, "get file size");
+        errx(1, "get file size %s", filename);
     }
     return st.st_size;
 }
-struct mbt_be_pair *get_pieces_length(void)
+struct mbt_be_pair *get_pieces_length()
 {
     struct mbt_be_node *node = mbt_be_num_init(256 * 1024);
     struct mbt_be_pair *pair = transform_to_pair(node, "piece length");
