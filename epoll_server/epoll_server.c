@@ -107,7 +107,7 @@ struct connection_t *accept_client(int epoll_instance, int server_socket,
     int c_fd = accept(server_socket, NULL, NULL);
     if (c_fd <= 0)
     {
-        return NULL;
+        return connection;
     }
 
     struct epoll_event event = { .events = EPOLLIN | EPOLLOUT,
