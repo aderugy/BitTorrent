@@ -3,6 +3,7 @@
 #include <err.h>
 #include <mbt/be/bencode.h>
 #include <mbt/net/net_types.h>
+#include <mbt/utils/logger.h>
 #include <mbt/utils/str.h>
 #include <mbt/utils/utils.h>
 #include <mbt/utils/view.h>
@@ -15,6 +16,7 @@
 #include "bits/stdint-uintn.h"
 #include "ctype.h"
 #include "mbt/net/net.h"
+#include "netdb.h"
 
 struct curl_data
 {
@@ -41,14 +43,14 @@ static size_t cb(void *data, size_t size, size_t nmemb, void *clientp)
 
         if (isprint(c))
         {
-            printf("%c", c);
+            logger("%c", c);
         }
         else
         {
-            printf(" %02X ", c);
+            logger(" %02X ", c);
         }
     }
-    printf("\n");
+    logger("\n");
 
     return realsize;
 }
@@ -69,7 +71,7 @@ static char *get_tracker_url(CURL *curl, struct mbt_net_context *ctx)
 
 static void print_peer(struct mbt_peer *peer)
 {
-    printf("PEER (%s);\n\tip: %s\n\tport: %s\n\n", peer->id->data,
+    logger("PEER (%s);\n\tip: %s\n\tport: %s\n\n", peer->id->data,
            peer->ip->data, peer->port->data);
 }
 
@@ -297,7 +299,7 @@ struct mbt_peer **mbt_net_context_peers(struct mbt_net_context *ctx)
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cb);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &chunk);
 
-    printf("GET %s\n", encoded_url);
+    logger("GET %s\n", encoded_url);
     CURLcode res = curl_easy_perform(curl); // Sending request
     curl_easy_cleanup(curl); // Cleaning
     free(encoded_url);
@@ -320,5 +322,6 @@ void mbt_peer_free(struct mbt_peer *peer)
     mbt_str_free(peer->id);
     mbt_str_free(peer->ip);
     mbt_str_free(peer->port);
+    freeaddrinfo(peer->addr);
     free(peer);
 }

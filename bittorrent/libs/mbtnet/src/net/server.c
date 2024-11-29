@@ -45,19 +45,12 @@ struct mbt_net_server *mbt_net_server_init(struct mbt_net_context *ctx)
         errx(EXIT_FAILURE, "epoll_create1");
     }
 
-    server->addr = mbt_getaddrinfo(ctx->ip, ctx->port);
-    if (!server->addr)
-    {
-        errx(EXIT_FAILURE, "mbt_getaddrinfo");
-    }
-
     server->streams = fifo_init();
     return server;
 }
 
 void mbt_net_server_free(struct mbt_net_server *server)
 {
-    freeaddrinfo(server->addr);
     mbt_net_context_free(server->ctx);
 
     while (server->streams->size)

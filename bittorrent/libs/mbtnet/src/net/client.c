@@ -5,6 +5,7 @@
 #include <mbt/net/net.h>
 #include <mbt/net/net_types.h>
 #include <mbt/net/net_utils.h>
+#include <mbt/utils/logger.h>
 #include <mbt/utils/xalloc.h>
 #include <netdb.h>
 #include <stddef.h>
@@ -40,16 +41,16 @@ void mbt_net_clients_print(struct mbt_net_client *clients)
         return;
     }
 
-    printf("CLIENT %hhi (%s)\n", clients->fd,
+    logger("CLIENT %hhi (%s)\n", clients->fd,
            mbt_client_state_name(clients->state));
-    printf("-- START BUFFER (%zu) --\n", clients->read);
+    logger("-- START BUFFER (%zu) --\n", clients->read);
 
     for (size_t i = 0; i < clients->read; i++)
     {
         unsigned char c = clients->buffer[i];
-        printf("%02X ", c);
+        logger("%02X ", c);
     }
-    printf("\n\n");
+    logger("\n\n");
 
     mbt_net_clients_print(clients->next);
 }
@@ -104,10 +105,10 @@ int mbt_net_client_handshake(struct mbt_net_server *server,
     struct mbt_msg_handshake hs;
     mbt_msg_write_handshake(server->ctx, &hs);
 
-    printf("handshake start\n");
+    logger("handshake start\n");
     mbt_net_clients_print(client);
     int status = sendall(client->fd, &hs, sizeof(struct mbt_msg_handshake));
-    printf("handshake end\n");
+    logger("handshake end\n");
     if (status != MBT_HANDLER_SUCCESS)
     {
         MBT_HANDLER_STATUS(status) // Return appropriate mbt handler status
@@ -168,7 +169,7 @@ bool mbt_net_peer_connect(struct mbt_net_server *server,
         return false;
     }
 
-    printf("Peer: %s:%s\n", peer->ip->data, peer->port->data);
+    logger("Peer: %s:%s\n", peer->ip->data, peer->port->data);
 
     mbt_peer_init_addr(peer);
     if (!peer->addr)
@@ -229,7 +230,7 @@ bool mbt_net_clients_remove(struct mbt_net_server *server,
                                       close_fd);
     }
 
-    printf("Removing client %d (error = %d)\n", client_fd, close_fd);
+    logger("Removing client %d (error = %d)\n", client_fd, close_fd);
     struct mbt_net_client *current = *clients;
     struct mbt_net_client *next = current->next;
     if (current->buffer)

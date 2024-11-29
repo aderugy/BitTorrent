@@ -57,7 +57,6 @@ struct mbt_net_server
 {
     int ep_fd;
 
-    struct addrinfo *addr;
     struct mbt_net_context *ctx;
     struct fifo *streams;
 };

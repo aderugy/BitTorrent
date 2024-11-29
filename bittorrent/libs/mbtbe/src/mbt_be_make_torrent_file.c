@@ -5,6 +5,7 @@
 #include <mbt/be/types_mbtbe.h>
 #include <mbt/utils/file.h>
 #include <mbt/utils/hash.h>
+#include <mbt/utils/logger.h>
 #include <mbt/utils/parse.h>
 #include <mbt/utils/str.h>
 #include <pwd.h>
@@ -363,11 +364,11 @@ struct mbt_be_pair *list_of_files(const char *path)
 
 void print_pair(struct mbt_be_pair *pair)
 {
-    printf("key -> %s\n", pair->key.data);
-    printf("size -> %li\n", pair->key.size);
+    logger("key -> %s\n", pair->key.data);
+    logger("size -> %li\n", pair->key.size);
     if (pair->val->type == MBT_BE_STR)
     {
-        printf("val -> %s\n", pair->val->v.str.data);
+        logger("val -> %s\n", pair->val->v.str.data);
     }
 }
 

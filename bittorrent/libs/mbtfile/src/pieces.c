@@ -2,6 +2,7 @@
 #include <mbt/be/types_mbtbe.h>
 #include <mbt/file/file_types.h>
 #include <mbt/utils/hash.h>
+#include <mbt/utils/logger.h>
 #include <mbt/utils/str.h>
 #include <mbt/utils/view.h>
 #include <mbt/utils/xalloc.h>
@@ -9,7 +10,6 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include "ctype.h"
 #include "mbt/file/file_handler.h"
 #include "mbt/file/piece.h"
 #include "stdio.h"
@@ -158,7 +158,7 @@ char *create_path(struct mbt_str **path, size_t path_length)
     char *copy = calloc(64, sizeof(char));
     for (size_t i = 0; i < path_length - 1; i++)
     {
-        printf("path: %s\n", path[i]->data);
+        logger("path: %s\n", path[i]->data);
         strcat(copy, path[i]->data);
         strcat(copy, "/");
         mkdir(copy, 0777);
@@ -191,19 +191,19 @@ bool write_in_file(const char *path, const char *start_data,
 
 bool mbt_piece_write(struct mbt_file_handler *fh, size_t piece_index)
 {
-    printf("mbt_piece");
+    logger("mbt_piece");
     if (fh->nb_pieces <= piece_index)
     {
         return false;
     }
     size_t read_piece_size = 0;
-    printf("piece_index: %zu\n", piece_index);
+    logger("piece_index: %zu\n", piece_index);
     for (size_t i = 0; fh->files_info[i]; i++)
     {
-        printf("i: %zu\n", i);
+        logger("i: %zu\n", i);
         char *path = create_path(fh->files_info[i]->path,
                                  fh->files_info[i]->path_length);
-        printf("path: %s\n", path);
+        logger("path: %s\n", path);
         if (!path)
         {
             free(path);
@@ -224,32 +224,6 @@ bool mbt_piece_write(struct mbt_file_handler *fh, size_t piece_index)
     }
     return true;
 }
-/*bool mbt_piece_write(struct mbt_file_handler *fh, size_t piece_index)
-{
-    if (fh->nb_pieces <= piece_index)
-    {
-        return false;
-    }
-
-    struct mbt_piece *piece = fh->pieces[piece_index];
-
-    void *vbuf = piece->data;
-    char *c = vbuf;
-    printf("PIECE WRITTEN:\n");
-    for (size_t i = 0; i < piece->size; i++)
-    {
-        if (isprint(c[i]))
-        {
-            printf("%c", c[i]);
-        }
-    }
-    printf("\n\n");
-
-    free(piece->data);
-    piece->data = NULL;
-    piece->completed = true;
-    return true;
-}*/
 
 bool mbt_piece_write_block(struct mbt_file_handler *fh, struct mbt_str *data,
                            uint32_t piece_index, uint32_t piece_offset)

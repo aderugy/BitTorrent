@@ -1,29 +1,30 @@
 #include <mbt/net/net_types.h>
+#include <mbt/utils/logger.h>
 
 void mbt_net_context_print(struct mbt_net_context *ctx)
 {
-    printf("MBT_NET_CONTEXT\n");
-    printf("\tAnnounce : %s\n", ctx->announce);
-    printf("\tHost     : %s:%s\n", ctx->ip, ctx->port);
+    logger("MBT_NET_CONTEXT\n");
+    logger("\tAnnounce : %s\n", ctx->announce);
+    logger("\tHost     : %s:%s\n", ctx->ip, ctx->port);
 
-    printf("\tInfo Hash: ");
+    logger("\tInfo Hash: ");
     for (size_t i = 0; i < 20; i++)
     {
         unsigned char c = ctx->info_hash[i];
-        printf("%02X", c);
+        logger("%02X", c);
     }
-    printf("\n");
+    logger("\n");
 
-    printf("\tPeer ID  : ");
+    logger("\tPeer ID  : ");
     for (size_t i = 0; i < 20; i++)
     {
-        printf("%c", ctx->peer_id[i]);
+        logger("%c", ctx->peer_id[i]);
     }
-    printf("\n");
+    logger("\n");
 
-    printf("\tDownloaded: %d - Uploaded: %d - Left: %zu\n", ctx->downloaded,
+    logger("\tDownloaded: %d - Uploaded: %d - Left: %zu\n", ctx->downloaded,
            ctx->uploaded, ctx->left);
-    printf("\tFile Handler: %p\n", ctx->fh);
+    logger("\tFile Handler: %p\n", ctx->fh);
 
-    printf("END MBT_NET_CONTEXT\n\n");
+    logger("END MBT_NET_CONTEXT\n\n");
 }
