@@ -33,7 +33,8 @@ struct mbt_net_context *mbt_net_context_init(struct mbt_torrent *t,
     memcpy(ctx->peer_id, MBT_PEER_ID_PREFIX, strlen(MBT_PEER_ID_PREFIX));
 
     ctx->announce = strdup(mbt_torrent_announce(t).data);
-    ctx->info_hash = strdup(t->info->hash);
+
+    ctx->info_hash = strdup(t->info->pieces->data);
     ctx->event = TRACKER_STARTED;
 
     ctx->left = t->info->length;

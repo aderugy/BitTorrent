@@ -423,8 +423,9 @@ struct mbt_be_pair *create_info_dict(const char *path)
 
     if (!is_dir(path))
     {
-        d = add_to_dict(d, get_name(path));
+
         d = add_to_dict(d, get_length(path));
+        d = add_to_dict(d, get_name(path));
         d = add_to_dict(d, get_pieces_length());
         d = add_to_dict(d, get_pieces(path));
     }

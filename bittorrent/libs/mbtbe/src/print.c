@@ -2,6 +2,8 @@
 #include <mbt/be/types_mbtbe.h>
 #include <stdio.h>
 
+#include "mbt/be/torrent_files.h"
+
 void mbt_torrent_print(struct mbt_torrent *torrent, int mode)
 {
     printf("{\n");
@@ -31,7 +33,9 @@ void mbt_torrent_print(struct mbt_torrent *torrent, int mode)
         printf("\t\t{\n");
         for (size_t i = 0; torrent->info->files[i]; i++)
         {
-            printf("\t\t\t\"length\" : %li\n", torrent->info->files[i]->length);
+            struct mbt_torrent_file *file = torrent->info->files[i];
+            printf("\t\t\t\"pathsize\" : %li\n", mbt_torrent_file_path_size(file));
+            printf("\t\t\t\"length\" : %li\n", mbt_torrent_file_length(file));
             printf("\t\t\t\"path\" : \"");
             for (size_t j = 0; torrent->info->files[i]->path[j]; j++)
             {
