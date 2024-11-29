@@ -159,8 +159,9 @@ char *create_path(struct mbt_str **path, size_t path_length)
     for (size_t i = 0; i < path_length - 1; i++)
     {
         printf("path: %s\n", path[i]->data);
-        mkdir(path[i]->data, 0777);
         strcat(copy, path[i]->data);
+        strcat(copy, "/");
+        mkdir(copy, 0777);
     }
 
     strcat(copy, path[path_length - 1]->data);
@@ -205,6 +206,7 @@ bool mbt_piece_write(struct mbt_file_handler *fh, size_t piece_index)
         printf("path: %s\n", path);
         if (!path)
         {
+            free(path);
             return false;
         }
 
@@ -215,8 +217,10 @@ bool mbt_piece_write(struct mbt_file_handler *fh, size_t piece_index)
 
         if (!write_in_file(path, start_data, end_data))
         {
+            free(path);
             return false;
         }
+        free(path);
     }
     return true;
 }
