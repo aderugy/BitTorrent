@@ -4,13 +4,15 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "bits/getopt_ext.h"
 
 #define OPTION_VERBOSE 1
 #define OPTION_PRETTY_PRINT 2
+#define OPTION_MAKE_TORRENT 4
 
-static struct option l_opts[] = { { "mktorrent", required_argument, 0, 'm' },
+static struct option l_opts[] = { { "mktorrent", no_argument, 0, 'm' },
                                   { "bind-ip", required_argument, 0, 'b' },
                                   { "bind-port", required_argument, 0, 'p' },
                                   { "pretty-print-torrent-file", no_argument, 0,
@@ -20,33 +22,31 @@ static struct option l_opts[] = { { "mktorrent", required_argument, 0, 'm' },
 
 int main(int argc, char *argv[])
 {
-    struct main_options options = { 0, NULL, NULL, NULL };
+    if (argc < 2)
+    {
+        errx(EXIT_FAILURE, "file not specified");
+    }
+
+    struct main_options options = {
+        .path = argv[argc - 1],
+        .ip = NULL,
+        .port = NULL,
+        .flags = 0,
+    };
 
     int c;
     int opt_idx = 0;
-    while ((c = getopt_long(argc, argv, "m:b:p:Pv", l_opts, &opt_idx)) != -1)
+    while ((c = getopt_long(argc - 1, argv, "mb:p:Pv", l_opts, &opt_idx)) != -1)
     {
         switch (c)
         {
         case 'm':
-            if (options.ip || options.port)
-            {
-                errx(EXIT_FAILURE, "options: cant make and leech torrent");
-            }
-            options.path = optarg;
+            options.flags |= OPTION_MAKE_TORRENT;
             break;
         case 'b':
-            if (options.path)
-            {
-                errx(EXIT_FAILURE, "options: cant make and leech torrent");
-            }
             options.ip = optarg;
             break;
         case 'p':
-            if (options.path)
-            {
-                errx(EXIT_FAILURE, "options: cant make and leech torrent");
-            }
             options.port = optarg;
             break;
         case 'v':
@@ -62,8 +62,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    return options.path
-        ? (options.flags & OPTION_PRETTY_PRINT ? main_prettyprint(options)
-                                               : main_mktorrent(options))
-        : main_download(options);
+    return options.flags & OPTION_MAKE_TORRENT
+        ? main_mktorrent(options)
+        : (options.flags & OPTION_PRETTY_PRINT ? main_prettyprint(options)
+                                               : main_download(options));
 }
