@@ -1,6 +1,10 @@
 #ifndef MAIN_H
 #define MAIN_H
 
+#define OPTION_VERBOSE 1
+#define OPTION_PRETTY_PRINT 2
+#define OPTION_MAKE_TORRENT 4
+
 struct main_options
 {
     int flags;

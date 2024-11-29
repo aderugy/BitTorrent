@@ -8,10 +8,6 @@
 
 #include "bits/getopt_ext.h"
 
-#define OPTION_VERBOSE 1
-#define OPTION_PRETTY_PRINT 2
-#define OPTION_MAKE_TORRENT 4
-
 static struct option l_opts[] = { { "mktorrent", no_argument, 0, 'm' },
                                   { "bind-ip", required_argument, 0, 'b' },
                                   { "bind-port", required_argument, 0, 'p' },
