@@ -13,7 +13,6 @@
 #include "connection.h"
 #include "utils/xalloc.h"
 
-#define MAX_CONCURRENT_IO 2
 #define BUFFER_SIZE 1000
 
 /**
@@ -110,8 +109,7 @@ struct connection_t *accept_client(int epoll_instance, int server_socket,
         return connection;
     }
 
-    struct epoll_event event = { .events = EPOLLIN | EPOLLOUT,
-                                 .data = { .fd = c_fd } };
+    struct epoll_event event = { .events = EPOLLIN, .data = { .fd = c_fd } };
     if (epoll_ctl(epoll_instance, EPOLL_CTL_ADD, c_fd, &event) == -1)
     {
         errx(EXIT_FAILURE, "epoll_ctl");
@@ -149,7 +147,7 @@ static void process_message(struct connection_t *clients,
             while (sent < client->nb_read) // Ensure everything is sent
             {
                 int s = send(clients->client_socket, client->buffer + sent,
-                             client->nb_read - sent, MSG_NOSIGNAL);
+                             client->nb_read - sent, 0);
 
                 if (s == -1)
                 {
@@ -170,10 +168,10 @@ static void process_message(struct connection_t *clients,
 
 static void read_events(int sfd, int epfd, struct connection_t **clients)
 {
-    struct epoll_event events[MAX_CONCURRENT_IO];
+    struct epoll_event events[MAX_EVENTS];
 
     // Waiting for an I/O event
-    int nb_fd = epoll_wait(epfd, events, MAX_CONCURRENT_IO, -1);
+    int nb_fd = epoll_wait(epfd, events, MAX_EVENTS, -1);
     if (nb_fd == -1)
     {
         errx(EXIT_FAILURE, "epoll_wait");
@@ -183,12 +181,6 @@ static void read_events(int sfd, int epfd, struct connection_t **clients)
     for (int i = 0; i < nb_fd; i++)
     {
         struct epoll_event current = events[i];
-
-        // Make sure client has sent data to avoid blocking recv
-        if ((current.events & EPOLLIN) == 0)
-        {
-            continue;
-        }
 
         // Because we saved the client fd when we add it in the epoll
         int client_fd = current.data.fd;
@@ -239,7 +231,7 @@ int main(int argc, char *argv[])
     char *port = argv[2];
 
     // Create epoll
-    int epoll_fd = epoll_create1(EPOLL_CLOEXEC);
+    int epoll_fd = epoll_create1(0);
     if (epoll_fd == -1)
     {
         return 1;
@@ -253,7 +245,7 @@ int main(int argc, char *argv[])
     }
 
     // We add the socket to the list of interests
-    struct epoll_event event = { .events = EPOLLIN | EPOLLOUT,
+    struct epoll_event event = { .events = EPOLLIN,
                                  .data = { .fd = socket_fd } };
 
     if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, socket_fd, &event) == -1)
