@@ -1,138 +1,69 @@
+#include "main.h"
+
 #include <err.h>
-#include <mbt/be/types_mbtbe.h>
-#include <mbt/file/file_handler.h>
-#include <mbt/file/file_types.h>
-#include <mbt/utils/str.h>
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "arpa/inet.h"
-#include "mbt/be/torrent.h"
-#include "mbt/file/piece.h"
-#include "mbt/net/context.h"
-#include "mbt/net/leeching.h"
-#include "mbt/net/net_types.h"
-#include "netinet/in.h"
-#include "string.h"
+#include "bits/getopt_ext.h"
 
-void verify_path(char **path)
-{
-    if (path == NULL)
-    {
-        errx(EXIT_FAILURE, "main: path");
-    }
-    if (*path[0] != '.')
-    {
-        char *new_path = calloc(strlen(*path) + 3, sizeof(char));
-        new_path[0] = '.';
-        new_path[1] = '/';
-        strcat(new_path, *path);
-        if (new_path == NULL)
-        {
-            errx(EXIT_FAILURE, "main: new_path");
-        }
-        *path = new_path;
-    }
-}
+#define OPTION_VERBOSE 1
+#define OPTION_PRETTY_PRINT 2
 
-void test_fh(struct mbt_torrent *torrent)
-{
-    struct mbt_file_handler *fh = mbt_file_handler_init(torrent);
-    for (size_t i = 0; fh->files_info[i]; i++)
-    {
-        printf("File %zu: ", i);
-        for (size_t j = 0; j < fh->files_info[i]->path_length - 1; j++)
-        {
-            printf("%s/", fh->files_info[i]->path[j]->data);
-        }
-        printf(
-            "%s\n",
-            fh->files_info[i]->path[fh->files_info[i]->path_length - 1]->data);
-    }
-
-    struct mbt_str h;
-    if (!mbt_str_ctor(&h, 20))
-    {
-        errx(1, "ctor h");
-    }
-    if (!mbt_str_pushcstr(&h, "aaaabbbbbbbbbb"))
-    {
-        errx(1, "pushcstr h");
-    }
-
-    mbt_piece_write_block(fh, &h, 0, 0);
-
-    mbt_piece_write(fh, 0);
-
-    mbt_file_handler_free(fh);
-}
+static struct option l_opts[] = { { "mktorrent", required_argument, 0, 'm' },
+                                  { "bind-ip", required_argument, 0, 'b' },
+                                  { "bind-port", required_argument, 0, 'p' },
+                                  { "pretty-print-torrent-file", no_argument, 0,
+                                    'P' },
+                                  { "verbose", no_argument, 0, 'v' },
+                                  { 0, 0, 0, 0 } };
 
 int main(int argc, char *argv[])
 {
-    if (argc > 2
-        && (strcmp(argv[1], "-m") == 0 || strcmp(argv[1], "--mktorrent") == 0))
+    struct main_options options = { 0, NULL, NULL, NULL };
+
+    int c;
+    int opt_idx = 0;
+    while ((c = getopt_long(argc, argv, "m:b:p:Pv", l_opts, &opt_idx)) != -1)
     {
-        verify_path(&argv[2]);
-        if (!mbt_be_make_torrent_file(argv[2]))
+        switch (c)
         {
-            errx(1, "mbt_be_make_torrent_file");
+        case 'm':
+            if (options.ip || options.port)
+            {
+                errx(EXIT_FAILURE, "options: cant make and leech torrent");
+            }
+            options.path = optarg;
+            break;
+        case 'b':
+            if (options.path)
+            {
+                errx(EXIT_FAILURE, "options: cant make and leech torrent");
+            }
+            options.ip = optarg;
+            break;
+        case 'p':
+            if (options.path)
+            {
+                errx(EXIT_FAILURE, "options: cant make and leech torrent");
+            }
+            options.port = optarg;
+            break;
+        case 'v':
+            options.flags |= OPTION_VERBOSE;
+            break;
+        case 'P':
+            options.flags |= OPTION_PRETTY_PRINT;
+            break;
+        case '?':
+            exit(1);
+        default:
+            errx(EXIT_FAILURE, "main: unkown option %c", c);
         }
-        return 0;
-    }
-    else if (argc > 2
-             && (strcmp(argv[1], "-P") == 0
-                 || strcmp(argv[1], "--pretty-print-torrent-file") == 0))
-    {
-        verify_path(&argv[2]);
-        struct mbt_torrent *torrent = mbt_torrent_init();
-        if (!mbt_be_parse_torrent_file(argv[2], torrent))
-        {
-            errx(EXIT_FAILURE, "mbt_be_parse_torrent_file");
-        }
-        mbt_torrent_print(torrent, 0);
-        mbt_torrent_free(torrent);
-        return 0;
-    }
-    else if (argc > 2
-             && (strcmp(argv[1], "-PF") == 0
-                 || strcmp(argv[1], "--pretty-print-torrent-files") == 0))
-    {
-        verify_path(&argv[2]);
-        struct mbt_torrent *torrent = mbt_torrent_init();
-        if (!mbt_be_parse_torrent_file(argv[2], torrent))
-        {
-            errx(EXIT_FAILURE, "mbt_be_parse_torrent_file");
-        }
-        test_fh(torrent);
-        mbt_torrent_print(torrent, 1);
-        mbt_torrent_free(torrent);
-        return 0;
-    }
-    if (argc != 2)
-    {
-        errx(EXIT_FAILURE, "main: args");
     }
 
-    char *path = argv[1];
-
-    struct mbt_torrent *torrent = mbt_torrent_init();
-    if (!mbt_be_parse_torrent_file(path, torrent))
-    {
-        errx(EXIT_FAILURE, "mbt_be_parse_torrent_file");
-    }
-    mbt_torrent_print(torrent, 0);
-
-    struct in_addr ip;
-    inet_pton(AF_INET, "127.0.0.1", &ip);
-
-    struct mbt_net_context *ctx = mbt_net_context_init(torrent, ip, 8001);
-    mbt_net_context_print(ctx);
-
-    printf("MBT_NET_LEECH\n");
-    mbt_leech(ctx);
-    printf("END MBT_NET_LEECH\n\n");
-
-    mbt_net_context_free(ctx);
-    mbt_torrent_free(torrent);
-    return 0;
+    return options.path
+        ? (options.flags & OPTION_PRETTY_PRINT ? main_prettyprint(options)
+                                               : main_mktorrent(options))
+        : main_download(options);
 }

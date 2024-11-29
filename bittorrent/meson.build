@@ -18,7 +18,7 @@ subdir('libs/mbtbe')
 subdir('libs/mbtfile')
 subdir('libs/mbtnet')
 
-src = ['src/main.c']
+src = ['src/main.c', 'src/download.c', 'src/mktorrent.c', 'src/print.c']
 
 mbt_inc = [ include_directories('src') ]
 executable(
