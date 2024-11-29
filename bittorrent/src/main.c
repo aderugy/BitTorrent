@@ -1,11 +1,14 @@
 #include <err.h>
 #include <mbt/be/types_mbtbe.h>
+#include <mbt/file/file_handler.h>
+#include <mbt/file/file_types.h>
 #include <mbt/utils/str.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "arpa/inet.h"
 #include "mbt/be/torrent.h"
+#include "mbt/file/piece.h"
 #include "mbt/net/context.h"
 #include "mbt/net/leeching.h"
 #include "mbt/net/net_types.h"
@@ -30,6 +33,38 @@ void verify_path(char **path)
         }
         *path = new_path;
     }
+}
+
+void test_fh(struct mbt_torrent *torrent)
+{
+    struct mbt_file_handler *fh = mbt_file_handler_init(torrent);
+    for (size_t i = 0; fh->files_info[i]; i++)
+    {
+        printf("File %zu: ", i);
+        for (size_t j = 0; j < fh->files_info[i]->path_length - 1; j++)
+        {
+            printf("%s/", fh->files_info[i]->path[j]->data);
+        }
+        printf(
+            "%s\n",
+            fh->files_info[i]->path[fh->files_info[i]->path_length - 1]->data);
+    }
+
+    struct mbt_str h;
+    if (!mbt_str_ctor(&h, 20))
+    {
+        errx(1, "ctor h");
+    }
+    if (!mbt_str_pushcstr(&h, "aaaabbbbbbbbbb"))
+    {
+        errx(1, "pushcstr h");
+    }
+
+    mbt_piece_write_block(fh, &h, 0, 0);
+
+    mbt_piece_write(fh, 0);
+
+    mbt_file_handler_free(fh);
 }
 
 int main(int argc, char *argv[])
@@ -68,6 +103,7 @@ int main(int argc, char *argv[])
         {
             errx(EXIT_FAILURE, "mbt_be_parse_torrent_file");
         }
+        test_fh(torrent);
         mbt_torrent_print(torrent, 1);
         mbt_torrent_free(torrent);
         return 0;
