@@ -83,7 +83,7 @@ int prepare_socket(const char *ip, const char *port)
         errx(1, "prepare_socket");
     }
 
-    if (listen(s_fd, 50))
+    if (listen(s_fd, SOMAXCONN))
     {
         errx(1, "listen");
     }
