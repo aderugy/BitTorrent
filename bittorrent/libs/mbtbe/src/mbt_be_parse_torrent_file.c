@@ -108,7 +108,10 @@ bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
             struct mbt_be_node *nval = val->v.dict[i]->val;
             if (strcmp(key.data, "pieces") == 0)
             {
-                mbt_str_pushcstr(torrent->info->pieces, nval->v.str.data);
+                for (size_t i = 0; i < nval->v.str.size; i++)
+                {
+                    mbt_str_pushc(torrent->info->pieces, nval->v.str.data[i]);
+                }
             }
             else if (strcmp(key.data, "piece length") == 0)
             {

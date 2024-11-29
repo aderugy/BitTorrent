@@ -158,6 +158,7 @@ char *create_path(struct mbt_str **path, size_t path_length)
     char *copy = calloc(64, sizeof(char));
     for (size_t i = 0; i < path_length - 1; i++)
     {
+        printf("path: %s\n", path[i]->data);
         mkdir(path[i]->data, 0777);
         strcat(copy, path[i]->data);
     }
@@ -189,15 +190,19 @@ bool write_in_file(const char *path, const char *start_data,
 
 bool mbt_piece_write(struct mbt_file_handler *fh, size_t piece_index)
 {
+    printf("mbt_piece");
     if (fh->nb_pieces <= piece_index)
     {
         return false;
     }
     size_t read_piece_size = 0;
+    printf("piece_index: %zu\n", piece_index);
     for (size_t i = 0; fh->files_info[i]; i++)
     {
+        printf("i: %zu\n", i);
         char *path = create_path(fh->files_info[i]->path,
                                  fh->files_info[i]->path_length);
+        printf("path: %s\n", path);
         if (!path)
         {
             return false;
@@ -205,7 +210,8 @@ bool mbt_piece_write(struct mbt_file_handler *fh, size_t piece_index)
 
         const char *start_data =
             mbt_piece_get_data(fh, piece_index) + read_piece_size;
-        const char *end_data = start_data + fh->files_info[i]->size;
+        const char *end_data = start_data + fh->files_info[i]->size - 1;
+        read_piece_size += fh->files_info[i]->size - 1;
 
         if (!write_in_file(path, start_data, end_data))
         {

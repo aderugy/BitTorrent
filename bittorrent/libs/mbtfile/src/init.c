@@ -4,6 +4,7 @@
 #include <mbt/utils/str.h>
 #include <mbt/utils/view.h>
 #include <mbt/utils/xalloc.h>
+#include <stddef.h>
 #include <string.h>
 
 #include "err.h"
@@ -20,16 +21,21 @@ void copy_files_dir(struct mbt_file_handler *file_handler,
         s++;
     }
 
-    file_handler->files_info = xcalloc(s + 1, sizeof(struct mbt_files_info));
+    file_handler->files_info = xcalloc(s + 1, sizeof(struct mbt_files_info *));
 
     for (size_t i = 0; torrent->info->files[i]; i++)
     {
+        file_handler->files_info[i] = xcalloc(1, sizeof(struct mbt_files_info));
+
         struct mbt_files_info *info = file_handler->files_info[i];
         struct mbt_torrent_file *file = torrent->info->files[i];
+        info->path = xcalloc(file->path_size + 1, sizeof(struct mbt_str *));
         info->size = file->length;
-        for (size_t p = 0; file->path[p]; p++)
+        size_t p = 0;
+        for (p = 0; file->path[p]; p++)
         {
-            struct mbt_str *str = xcalloc(1, sizeof(struct mbt_str));
+            info->path[p] = xcalloc(1, sizeof(struct mbt_str));
+            struct mbt_str *str = info->path[p];
             if (!mbt_str_ctor(str, 64))
             {
                 errx(1, "ctor copy file");
@@ -39,6 +45,7 @@ void copy_files_dir(struct mbt_file_handler *file_handler,
                 errx(1, "pushcstr");
             }
         }
+        info->path_length = p;
     }
 }
 
