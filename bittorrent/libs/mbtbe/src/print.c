@@ -34,7 +34,8 @@ void mbt_torrent_print(struct mbt_torrent *torrent, int mode)
         for (size_t i = 0; torrent->info->files[i]; i++)
         {
             struct mbt_torrent_file *file = torrent->info->files[i];
-            printf("\t\t\t\"pathsize\" : %li\n", mbt_torrent_file_path_size(file));
+            printf("\t\t\t\"pathsize\" : %li\n",
+                   mbt_torrent_file_path_size(file));
             printf("\t\t\t\"length\" : %li\n", mbt_torrent_file_length(file));
             printf("\t\t\t\"path\" : \"");
             for (size_t j = 0; torrent->info->files[i]->path[j]; j++)
