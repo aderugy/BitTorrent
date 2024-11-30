@@ -58,15 +58,8 @@ int mbt_msg_receive_handler_piece(struct mbt_net_server *server,
 
     char *data = msg->payload + 8;
     size_t data_len = mbt_msg_length(msg) - 9;
-    if (begin % MBT_BLOCK_SIZE)
+    if (begin % MBT_BLOCK_SIZE || data_len > MBT_BLOCK_SIZE)
     {
-        warnx("mbt_net_msg_receive_handler_piece: begin is not a multiple of "
-              "MBT_BLOCK_SIZE");
-        return MBT_HANDLER_REQUEST_CLOSE;
-    }
-    if (data_len > MBT_BLOCK_SIZE)
-    {
-        warnx("mbt_net_msg_receive_handler_piece: data_len > MBT_BLOCK_SIZE");
         return MBT_HANDLER_REQUEST_CLOSE;
     }
 
