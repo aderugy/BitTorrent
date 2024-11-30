@@ -90,6 +90,7 @@ struct mbt_file_handler *mbt_file_handler_init(struct mbt_torrent *torrent)
     mbt_str_pushcv(fh->name, name);
 
     fh->nb_pieces = hash.size / 20;
+    fh->is_dir = torrent->is_dir;
 
     fh->pieces = xcalloc(fh->nb_pieces, sizeof(struct mbt_piece *));
     for (size_t i = 0; i < fh->nb_pieces; i++)

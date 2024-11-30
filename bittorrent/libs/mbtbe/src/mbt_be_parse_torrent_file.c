@@ -33,18 +33,15 @@ void push_file(struct mbt_torrent *torrent, struct mbt_be_node **path_list,
         if (!path_list[j]->v.str.data)
         {
             errx(1, "mbt be parse torrent file : path is null");
-            return;
         }
         struct mbt_str *str = calloc(1, sizeof(struct mbt_str));
         if (!mbt_str_ctor(str, 64))
         {
             errx(1, "mbt be parse torrent file : cannot init path");
-            return;
         }
         if (!mbt_str_pushcstr(str, path_list[j]->v.str.data))
         {
             errx(1, "mbt be parse torrent file : cannot push path");
-            return;
         }
         list[index]->path[j] = str;
         list[index]->path_size++;
@@ -62,6 +59,7 @@ bool handle_files_list(struct mbt_torrent *torrent, struct mbt_be_node *node,
     struct mbt_be_node *val = node->v.dict[index]->val;
     size_t i = 0;
     struct mbt_be_node **list = val->v.list;
+
     while (list[i])
     {
         struct mbt_be_node *file = list[i];

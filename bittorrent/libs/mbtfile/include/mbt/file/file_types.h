@@ -19,6 +19,8 @@ struct mbt_file_handler
 {
     struct mbt_str *h;
     struct mbt_str *name;
+
+    bool is_dir;
     struct mbt_files_info **files_info;
 
     size_t nb_pieces;

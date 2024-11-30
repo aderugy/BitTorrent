@@ -83,9 +83,16 @@ enum mbt_piece_status mbt_piece_check(struct mbt_file_handler *fh,
     return res ? MBT_PIECE_VALID : MBT_PIECE_INVALID;
 }
 
-char *create_path(struct mbt_str **path, size_t path_length)
+char *create_path(struct mbt_str **path, size_t path_length, char *dir_name)
 {
     char *copy = calloc(1000, sizeof(char));
+    if (dir_name)
+    {
+        strcat(copy, dir_name);
+        strcat(copy, "/");
+        mkdir(copy, 0777);
+    }
+
     for (size_t i = 0; i < path_length - 1; i++)
     {
         logger("path: %s\n", path[i]->data);
@@ -125,7 +132,8 @@ static struct mbt_bite *mbt_piece_get_files(struct mbt_file_handler *fh,
         struct mbt_bite *bite = xcalloc(1, sizeof(struct mbt_bite));
         bite->offset = offset;
         bite->len = fi->size - offset;
-        bite->path = create_path(fi->path, fi->path_length);
+        bite->path = create_path(fi->path, fi->path_length,
+                                 fh->is_dir ? fh->name->data : NULL);
         offset = 0;
 
         if (bite->len > piece_len)
