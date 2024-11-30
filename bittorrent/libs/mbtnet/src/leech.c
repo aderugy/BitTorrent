@@ -1,17 +1,53 @@
 #include <err.h>
+#include <mbt/file/file_types.h>
+#include <mbt/net/context.h>
+#include <mbt/net/fifo.h>
+#include <mbt/net/msg.h>
+#include <mbt/net/msg_handler.h>
+#include <mbt/net/net.h>
 #include <mbt/net/net_types.h>
+#include <mbt/net/peer.h>
+#include <mbt/utils/logger.h>
 #include <netdb.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "mbt/net/context.h"
-#include "mbt/net/fifo.h"
-#include "mbt/net/msg.h"
-#include "mbt/net/msg_handler.h"
-#include "mbt/net/net.h"
-#include "mbt/net/peer.h"
-#include "stdlib.h"
-#include "string.h"
+static void find_blocks(struct mbt_net_client **clients,
+                        struct mbt_net_server *server)
+{
+    struct mbt_net_client *head = *clients;
+    while (head)
+    {
+        int status = mbt_net_client_next_block(server, head);
+        int fd = head->fd;
+
+        head = head->next;
+
+        if (status == STREAM_NO_BLOCK_AVAILABLE)
+        {
+            mbt_net_clients_remove(server, clients, fd, true);
+        }
+    }
+
+    if (!*clients)
+    {
+        struct mbt_file_handler *fh = server->ctx->fh;
+
+        for (size_t i = 0; i < fh->nb_pieces; i++)
+        {
+            if (!fh->pieces[i]->completed)
+            {
+                mbt_net_server_free(server);
+                errx(EXIT_FAILURE, "dl failed");
+            }
+        }
+
+        mbt_net_server_free(server);
+        exit(0);
+    }
+}
 
 void mbt_leech(struct mbt_net_context *ctx)
 {
@@ -44,18 +80,7 @@ void mbt_leech(struct mbt_net_context *ctx)
 
     while (true)
     {
-        if (!clients)
-        {
-            mbt_net_server_free(server);
-            exit(1); // Status code should be 0 if piece was downloaded
-        }
-
-        struct mbt_net_client *head = clients;
-        while (head)
-        {
-            mbt_net_client_next_block(server, head);
-            head = head->next;
-        }
+        find_blocks(&clients, server);
 
         for (size_t i = 0; i < server->streams->size; i++)
         {

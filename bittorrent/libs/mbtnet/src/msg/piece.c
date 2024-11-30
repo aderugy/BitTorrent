@@ -12,22 +12,8 @@
 #include <string.h>
 
 #include "mbt/net/fifo.h"
+#include "mbt/utils/logger.h"
 
-/*
- * Algorithm:
- * 1/ Parse the message
- * 2/ Check that the block matches the file handler specs
- * 3/ Write the block in memory
- * 4/ Check if the piece is complete and valid
- *      a/ The piece is valid:
- *          1/ Mark piece as success
- *          2/ Write it to the disk
- *          3/ Send 'have' message
- *          4/ Find another piece for the peer
- *      b/ The piece is invalid: close the client and mark the piece as
- *          available
- *      c/ The piece is downloading: return normally
- */
 int mbt_msg_receive_handler_piece(struct mbt_net_server *server,
                                   struct mbt_net_client *client)
 {
@@ -52,22 +38,23 @@ int mbt_msg_receive_handler_piece(struct mbt_net_server *server,
 
     uint32_t index;
     memcpy(&index, msg->payload, 4);
+    index = htonl(index);
 
     uint32_t begin;
     memcpy(&begin, msg->payload + 4, 4);
+    begin = htonl(begin);
 
     char *data = msg->payload + 8;
     size_t data_len = mbt_msg_length(msg) - 9;
-    if (begin % MBT_BLOCK_SIZE || data_len > MBT_BLOCK_SIZE)
-    {
-        return MBT_HANDLER_REQUEST_CLOSE;
-    }
 
     struct mbt_str *mbt_data = xcalloc(1, sizeof(struct mbt_str));
     mbt_data->size = data_len;
     mbt_data->capacity = data_len;
     mbt_data->data = xcalloc(data_len + 1, sizeof(char));
     memcpy(mbt_data->data, data, data_len);
+
+    logger_buffer("[index (4 bytes) Begin (4 bytes)]", msg->payload, 8);
+    logger("Index = %u, Begin = %u\n", index, htonl(begin));
 
     struct mbt_file_handler *fh = server->ctx->fh;
     mbt_piece_write_block(fh, mbt_data, index, begin);

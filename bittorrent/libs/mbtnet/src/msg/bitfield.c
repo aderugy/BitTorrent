@@ -4,9 +4,9 @@
 #include <mbt/net/msg_handler.h>
 #include <mbt/net/net.h>
 #include <mbt/net/net_utils.h>
+#include <mbt/utils/logger.h>
 #include <mbt/utils/xalloc.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <string.h>
 
 int mbt_msg_receive_handler_bitfield(
@@ -19,7 +19,7 @@ int mbt_msg_receive_handler_bitfield(
         return MBT_HANDLER_REQUEST_CLOSE;
     }
 
-    printf("recv: bitfield: %d\n", client->fd);
+    logger("recv: bitfield: %d\n", client->fd);
 
     void *v_msg = client->buffer;
     struct mbt_msg *msg = v_msg;
@@ -30,11 +30,7 @@ int mbt_msg_receive_handler_bitfield(
     for (uint32_t i = 0; i < bytes; i++)
     {
         client->bitfield[i] = (msg->payload[i] & (1 << (7 - (i % 8)))) > 0;
-
-        printf("%c", client->bitfield[i] ? '1' : '0');
-        printf(" ");
     }
-    printf("\n\n");
 
     client->state = MBT_CLIENT_BITFIELD_RECEIVED;
     return MBT_HANDLER_SUCCESS;

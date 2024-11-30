@@ -27,7 +27,7 @@ void mbt_torrent_print(struct mbt_torrent *torrent, int mode)
     }
     printf("\n");
 
-    if (mode == 1)
+    if (mode == 1 && torrent->info->files[0])
     {
         printf("\t\t\"files\" :\n");
         printf("\t\t{\n");
@@ -46,12 +46,5 @@ void mbt_torrent_print(struct mbt_torrent *torrent, int mode)
         }
         printf("\t\t}\n");
     }
-    printf("\t}\n");
-    printf("}\n");
-    /*    printf("\t\t\"pieces\" : ");
-        for (size_t i = 0; i < 20; i++)
-        {
-            unsigned char c = torrent->info->hash[i];
-            printf("%02X", c);
-        }*/
+    printf("\t}\n}\n");
 }

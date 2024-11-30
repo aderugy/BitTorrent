@@ -14,10 +14,19 @@
 #include "mbt/file/piece.h"
 #include "stdio.h"
 
+struct mbt_bite
+{
+    char *path;
+    size_t len;
+    size_t offset;
+    struct mbt_bite *next;
+};
+
 bool mbt_piece_block_is_received(struct mbt_file_handler *fh,
                                  size_t piece_index, size_t block_index)
 {
-    return fh->pieces[piece_index]->status[block_index];
+    return fh->pieces[piece_index]->status[block_index]
+        == BLOCK_STATUS_COMPLETED;
 }
 
 void mbt_piece_block_set_received(struct mbt_file_handler *fh,
@@ -56,6 +65,14 @@ enum mbt_piece_status mbt_piece_check(struct mbt_file_handler *fh,
         return MBT_PIECE_DOWNLOADING;
     }
 
+    for (size_t i = 0; i < piece->nb_blocks; i++)
+    {
+        if (piece->status[i] != BLOCK_STATUS_COMPLETED)
+        {
+            return MBT_PIECE_DOWNLOADING;
+        }
+    }
+
     // Compare hashes
     void *v_data = piece->data;
     char *cur_hash = sha1(v_data, piece->size);
@@ -68,7 +85,7 @@ enum mbt_piece_status mbt_piece_check(struct mbt_file_handler *fh,
 
 char *create_path(struct mbt_str **path, size_t path_length)
 {
-    char *copy = calloc(64, sizeof(char));
+    char *copy = calloc(1000, sizeof(char));
     for (size_t i = 0; i < path_length - 1; i++)
     {
         logger("path: %s\n", path[i]->data);
@@ -79,63 +96,112 @@ char *create_path(struct mbt_str **path, size_t path_length)
 
     strcat(copy, path[path_length - 1]->data);
 
-    strcat(copy, "t");
     return copy;
 }
 
-bool write_in_file(const char *path, const char *start_data,
-                   const char *end_data)
+static struct mbt_bite *mbt_piece_get_files(struct mbt_file_handler *fh,
+                                            uint32_t piece_index)
 {
-    FILE *file = fopen(path, "w");
+    struct mbt_bite *mb = NULL;
+    size_t offset = piece_index * MBT_PIECE_SIZE;
 
-    if (!file)
+    size_t i = 0;
+    for (; offset > 0 && fh->files_info[i]; i++)
     {
-        return false;
+        struct mbt_files_info *fi = fh->files_info[i];
+
+        if (fi->size > offset)
+        {
+            break;
+        }
+        offset -= fi->size;
     }
 
-    for (const char *i = start_data; i < end_data; i++)
+    struct mbt_bite *next = mb;
+    size_t piece_len = fh->pieces[piece_index]->size;
+    for (; fh->files_info[i] && piece_len > 0; i++)
     {
-        fputc(*i, file);
-    }
-    fclose(file);
+        struct mbt_files_info *fi = fh->files_info[i];
+        struct mbt_bite *bite = xcalloc(1, sizeof(struct mbt_bite));
+        bite->offset = offset;
+        bite->len = fi->size - offset;
+        bite->path = create_path(fi->path, fi->path_length);
+        offset = 0;
 
-    return true;
+        if (bite->len > piece_len)
+        {
+            bite->len = piece_len;
+        }
+        piece_len -= bite->len;
+
+        if (!next)
+        {
+            mb = bite;
+            next = bite;
+        }
+        else
+        {
+            next->next = bite;
+            next = bite;
+        }
+    }
+
+    return mb;
+}
+
+static bool write_in_file(struct mbt_bite *bite, size_t piece_index,
+                          size_t written, const char *data)
+{
+    if (!bite)
+    {
+        return true;
+    }
+
+    FILE *f = fopen(bite->path, "w");
+    if (!f)
+    {
+        errx(EXIT_FAILURE, "write_in_file: fopen");
+    }
+
+    if (fseek(f, bite->offset, SEEK_SET))
+    {
+        perror(NULL);
+        errx(EXIT_FAILURE, "write_in_file: fseek");
+    }
+
+    size_t bytes = 0;
+    while (bytes < bite->len)
+    {
+        int w = fwrite(data + written, sizeof(char), bite->len - bytes, f);
+        if (w <= 0)
+        {
+            errx(EXIT_FAILURE, "write_in_file: fwrite");
+        }
+
+        bytes += w;
+    }
+
+    fclose(f);
+    struct mbt_bite *next = bite->next;
+
+    free(bite->path);
+    free(bite);
+
+    return write_in_file(next, piece_index, written + bytes, data);
 }
 
 bool mbt_piece_write(struct mbt_file_handler *fh, size_t piece_index)
 {
-    logger("mbt_piece");
     if (fh->nb_pieces <= piece_index)
     {
         return false;
     }
-    size_t read_piece_size = 0;
-    logger("piece_index: %zu\n", piece_index);
-    for (size_t i = 0; fh->files_info[i]; i++)
-    {
-        logger("i: %zu\n", i);
-        char *path = create_path(fh->files_info[i]->path,
-                                 fh->files_info[i]->path_length);
-        logger("path: %s\n", path);
-        if (!path)
-        {
-            free(path);
-            return false;
-        }
 
-        const char *start_data =
-            mbt_piece_get_data(fh, piece_index) + read_piece_size;
-        const char *end_data = start_data + fh->files_info[i]->size - 1;
-        read_piece_size += fh->files_info[i]->size - 1;
+    void *v_buf = fh->pieces[piece_index]->data;
 
-        if (!write_in_file(path, start_data, end_data))
-        {
-            free(path);
-            return false;
-        }
-        free(path);
-    }
-    return true;
+    struct mbt_bite *bite = mbt_piece_get_files(fh, piece_index);
+
+    return write_in_file(bite, piece_index, 0, v_buf);
 }
 
 bool mbt_piece_write_block(struct mbt_file_handler *fh, struct mbt_str *data,

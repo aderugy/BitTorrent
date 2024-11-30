@@ -83,6 +83,8 @@ int mbt_net_stream_completed(struct mbt_net_server *server,
     free(stream);
 
     int piece_status = mbt_piece_check(fh, piece_index);
+    client->state = MBT_CLIENT_READY;
+
     if (piece_status == MBT_PIECE_VALID)
     {
         if (!mbt_piece_write(fh, piece_index))
@@ -90,9 +92,9 @@ int mbt_net_stream_completed(struct mbt_net_server *server,
             errx(EXIT_FAILURE, "mbt_net_stream_completed: failed to write");
         }
 
-        client->state = MBT_CLIENT_READY;
         piece->completed = true;
         free(piece->data);
+        piece->data = NULL;
     }
     else if (piece_status == MBT_PIECE_INVALID)
     {
@@ -106,6 +108,23 @@ int mbt_net_stream_completed(struct mbt_net_server *server,
 int mbt_net_client_next_block(struct mbt_net_server *server,
                               struct mbt_net_client *client)
 {
+    /*
+    if (server->streams->size > 0)
+    {
+        logger("STREAMS:\n");
+    }
+    for (size_t i = 0; i < server->streams->size; i++)
+    {
+        struct mbt_net_stream *stream = fifo_pop(server->streams);
+        fifo_push(server->streams, stream);
+
+        logger("stream %zu: { \n\tindex=%u, \n\tbegin=%u, \n\tlength=%u, "
+               "\n\tstatus=%d \n}\n",
+               i + 1, stream->index, stream->begin, stream->length,
+               stream->status);
+    }
+    */
+
     if (server->streams->size >= MAX_STREAMS_CONCURRENT
         || client->state != MBT_CLIENT_READY || client->choked)
     {
@@ -121,6 +140,11 @@ int mbt_net_client_next_block(struct mbt_net_server *server,
         }
 
         struct mbt_piece *piece = fh->pieces[piece_index];
+        if (piece->completed)
+        {
+            continue;
+        }
+
         for (uint32_t block_index = 0; block_index < piece->nb_blocks;
              block_index++)
         {
@@ -280,7 +304,6 @@ bool mbt_net_clients_remove(struct mbt_net_server *server,
                                       close_fd);
     }
 
-    logger("Removing client %d (error = %d)\n", client_fd, close_fd);
     struct mbt_net_client *current = *clients;
     struct mbt_net_client *next = current->next;
     if (current->buffer)

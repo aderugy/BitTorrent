@@ -124,8 +124,8 @@ void mbt_net_server_process_event(struct mbt_net_server *server,
 
         if (!client)
         {
-            warnx("Unknown fd. Removing it from the peers");
             mbt_net_clients_remove(server, clients, client_fd, true);
+            continue;
         }
 
         int out_status =
@@ -161,7 +161,5 @@ void mbt_net_server_process_event(struct mbt_net_server *server,
         {
             mbt_msg_process(server, client, buffer, r);
         }
-
-        mbt_net_clients_print(*clients);
     }
 }
