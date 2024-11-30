@@ -208,26 +208,6 @@ struct mbt_be_node *dict_of_file_length_path(char *path, const char *origin)
 
     struct mbt_be_node *node_length = mbt_be_num_init(length);
 
-    struct mbt_str name;
-
-    if (!mbt_str_ctor(&name, 64))
-    {
-        mbt_str_free(&name);
-        return NULL;
-    }
-
-    if (!mbt_str_pushcstr(&name, parse_path_get_file_name(path)))
-    {
-        mbt_str_free(&name);
-        return NULL;
-    }
-
-    // struct mbt_be_node *node_name = mbt_be_str_init(MBT_CVIEW_OF(name));
-
-    mbt_str_dtor(&name);
-
-    //    struct mbt_be_pair *pair_name = transform_to_pair(node_name, "name");
-
     struct mbt_be_pair *pair_length = transform_to_pair(node_length, "length");
 
     struct mbt_be_pair **d = calloc(2 + 1, sizeof(struct mbt_be_pair));
