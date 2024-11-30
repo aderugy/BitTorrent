@@ -2,7 +2,7 @@ mbtfile_inc = [ include_directories('include/') ]
 
 mbtfile = shared_library(
   'mbtfile',
-  sources : [ 'src/init.c', 'src/free.c', 'src/handler.c', 'src/pieces.c', 'src/piece_utils.c'],
+  sources : [ 'src/init.c', 'src/free.c', 'src/handler.c', 'src/pieces.c', 'src/piece_utils.c', 'src/pieces_data.c'],
   include_directories : mbtfile_inc,
   dependencies : [ mbtutils_dep, mbtbe_dep ],
   install : true,

@@ -48,7 +48,7 @@ uint64_t get_file_size(const char *filename)
     }
     return st.st_size;
 }
-struct mbt_be_pair *get_pieces_length()
+struct mbt_be_pair *get_pieces_length(void)
 {
     struct mbt_be_node *node = mbt_be_num_init(256 * 1024);
     struct mbt_be_pair *pair = transform_to_pair(node, "piece length");

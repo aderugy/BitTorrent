@@ -19,7 +19,8 @@
 #include "mbt/be/bencode.h"
 #include "mbt/utils/view.h"
 
-void get_pieces_string_buff(struct mbt_str data, struct mbt_str *sha1_mbt)
+static void get_pieces_string_buff(struct mbt_str data,
+                                   struct mbt_str *sha1_mbt)
 {
     for (size_t i = 0; i < data.size; i += 256 * 1024)
     {
@@ -53,7 +54,7 @@ void get_pieces_string_buff(struct mbt_str data, struct mbt_str *sha1_mbt)
     }
 }
 
-void get_pieces_string(const char *path, struct mbt_str *sha1_mbt)
+static void get_pieces_string(const char *path, struct mbt_str *sha1_mbt)
 {
     struct mbt_str data;
     if (!mbt_str_ctor(&data, 64))
@@ -99,7 +100,7 @@ void get_pieces_string(const char *path, struct mbt_str *sha1_mbt)
     mbt_str_dtor(&data);
 }
 
-struct mbt_be_pair *get_user(const char *path)
+static struct mbt_be_pair *get_user(const char *path)
 {
     struct stat st;
     if (stat(path, &st) != 0)
@@ -132,8 +133,8 @@ struct mbt_be_pair *get_user(const char *path)
     return pair;
 }
 
-struct mbt_be_pair **add_to_dict(struct mbt_be_pair **d,
-                                 struct mbt_be_pair *pair)
+static struct mbt_be_pair **add_to_dict(struct mbt_be_pair **d,
+                                        struct mbt_be_pair *pair)
 {
     struct mbt_be_pair **a =
         realloc(d, sizeof(struct mbt_be_pair) * (sizeof(d) + 1));
@@ -147,8 +148,8 @@ struct mbt_be_pair **add_to_dict(struct mbt_be_pair **d,
     return a;
 }
 
-struct mbt_be_node **add_to_list(struct mbt_be_node **l,
-                                 struct mbt_be_node *node)
+static struct mbt_be_node **add_to_list(struct mbt_be_node **l,
+                                        struct mbt_be_node *node)
 {
     if (l == NULL)
     {
@@ -172,7 +173,7 @@ struct mbt_be_node **add_to_list(struct mbt_be_node **l,
     return a;
 }
 
-struct mbt_be_pair *get_path_of_file(char *path)
+static struct mbt_be_pair *get_path_of_file(char *path)
 {
     struct mbt_be_node **l = calloc(1, sizeof(struct mbt_be_node));
 
@@ -202,7 +203,8 @@ struct mbt_be_pair *get_path_of_file(char *path)
     return pair_path;
 }
 
-struct mbt_be_node *dict_of_file_length_path(char *path, const char *origin)
+static struct mbt_be_node *dict_of_file_length_path(char *path,
+                                                    const char *origin)
 {
     size_t length = get_file_size(path);
 
@@ -221,8 +223,8 @@ struct mbt_be_node *dict_of_file_length_path(char *path, const char *origin)
     return node;
 }
 
-void fill_pieces_and_file_length_rec(char *path, struct mbt_str *pieces,
-                                     uint64_t *size)
+static void fill_pieces_and_file_length_rec(char *path, struct mbt_str *pieces,
+                                            uint64_t *size)
 {
     DIR *d = opendir(path);
     if (d == NULL)
@@ -276,8 +278,8 @@ void fill_pieces_and_file_length_rec(char *path, struct mbt_str *pieces,
     closedir(d);
 }
 
-void fill_d_files_rec(char *path, struct mbt_be_node ***d_files,
-                      const char *origin)
+static void fill_d_files_rec(char *path, struct mbt_be_node ***d_files,
+                             const char *origin)
 {
     if (d_files == NULL)
     {
@@ -328,7 +330,7 @@ void fill_d_files_rec(char *path, struct mbt_be_node ***d_files,
     closedir(d);
 }
 
-struct mbt_be_pair *list_of_files(const char *path)
+static struct mbt_be_pair *list_of_files(const char *path)
 {
     struct mbt_be_node **d_files = calloc(1, sizeof(struct mbt_be_pair));
     char *copy_path = calloc(1, strlen(path) + 1);
@@ -444,7 +446,6 @@ bool mbt_be_make_torrent_file(const char *path)
     if (node->type != MBT_BE_DICT)
     {
         errx(1, "mbt be make torent file not a dict");
-        return false;
     }
 
     struct mbt_str buffer = mbt_be_encode(node);
@@ -453,7 +454,6 @@ bool mbt_be_make_torrent_file(const char *path)
     if (!mbt_str_ctor(&path_mbt, 10))
     {
         errx(1, "cant path mbt form make torrent");
-        return false;
     }
     if (is_dir(path))
     {
