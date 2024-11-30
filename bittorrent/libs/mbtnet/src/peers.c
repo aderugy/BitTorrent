@@ -164,11 +164,11 @@ static struct mbt_peer **parse_peers_list_compact(struct mbt_str str)
 
         inet_ntop(AF_INET, ptr, peer->ip->data, PEER_ID_LENGTH);
 
-        char *port_str;
         unsigned char a = ptr[4];
         unsigned char b = ptr[5];
         unsigned int port = (a << 8) + b; // Big Endian
 
+        char *port_str = NULL;
         asprintf(&port_str, "%d", port);
         mbt_str_pushcstr(peer->port, port_str);
         free(port_str);
