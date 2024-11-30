@@ -15,6 +15,8 @@ struct mbt_torrent_file
 
 struct mbt_torrent
 {
+    char hash[20];
+
     struct mbt_str *announce;
     struct mbt_str *created_by;
     size_t creation_date;
@@ -25,8 +27,6 @@ struct mbt_torrent
 
 struct info
 {
-    char hash[20];
-
     size_t piece_length;
     struct mbt_str *pieces;
     struct mbt_str *name;

@@ -57,7 +57,7 @@ int mbt_msg_receive_handler_piece(struct mbt_net_server *server,
     memcpy(&begin, msg->payload + 4, 4);
 
     char *data = msg->payload + 8;
-    size_t data_len = mbt_msg_length(msg) - 8;
+    size_t data_len = mbt_msg_length(msg) - 9;
     if (begin % MBT_BLOCK_SIZE)
     {
         warnx("mbt_net_msg_receive_handler_piece: begin is not a multiple of "
@@ -71,34 +71,14 @@ int mbt_msg_receive_handler_piece(struct mbt_net_server *server,
     }
 
     struct mbt_str *mbt_data = xcalloc(1, sizeof(struct mbt_str));
-    mbt_data->size = data_len - 1;
-    mbt_data->capacity = data_len - 1;
-    mbt_data->data = xcalloc(data_len, sizeof(char));
-    memcpy(mbt_data->data, data, data_len - 1);
+    mbt_data->size = data_len;
+    mbt_data->capacity = data_len;
+    mbt_data->data = xcalloc(data_len + 1, sizeof(char));
+    memcpy(mbt_data->data, data, data_len);
 
     struct mbt_file_handler *fh = server->ctx->fh;
     mbt_piece_write_block(fh, mbt_data, index, begin);
     mbt_str_free(mbt_data);
 
-    int piece_status = mbt_piece_check(fh, stream->index);
-    if (piece_status == MBT_PIECE_VALID)
-    {
-        if (!mbt_piece_write(fh, stream->index))
-        {
-            errx(EXIT_FAILURE,
-                 "mbt_net_msg_receive_handler_piece: Failed to write piece");
-        }
-
-        printf("C'EST TROP CARRE FREROT\n");
-        // TODO: Find another piece to request
-        client->state = MBT_CLIENT_COMPLETED;
-        return MBT_HANDLER_SUCCESS;
-    }
-    else if (piece_status == MBT_PIECE_INVALID)
-    {
-        // TODO: Reset piece and find another peer
-        return MBT_HANDLER_CLIENT_ERROR;
-    }
-
-    return MBT_HANDLER_SUCCESS;
+    return mbt_net_stream_completed(server, client);
 }

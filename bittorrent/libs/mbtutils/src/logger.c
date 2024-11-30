@@ -20,3 +20,15 @@ void logger(const char *s, ...)
         va_end(ap);
     }
 }
+
+void logger_buffer(const char *name, void *buf, size_t len)
+{
+    unsigned char *c_buf = buf;
+
+    printf("%s (%zu bytes): ", name, len);
+    for (size_t i = 0; i < len; i++)
+    {
+        printf("%02X.", c_buf[i]);
+    }
+    printf("\n");
+}

@@ -28,8 +28,6 @@ int mbt_msg_receive_handler_request(
     MBT_EXTRACT_UINT32_T(msg, 5, index)
     MBT_EXTRACT_UINT32_T(msg, 9, begin)
     MBT_EXTRACT_UINT32_T(msg, 13, length)
-    printf("Received 'request' message:\n");
-    printf("Index: %u - Begin: %u - Length: %u\n\n", index, begin, length);
 
     return MBT_HANDLER_SUCCESS;
 }
@@ -38,8 +36,6 @@ int mbt_msg_send_handler_request(
     __attribute((unused)) struct mbt_net_server *server,
     struct mbt_net_stream *stream)
 {
-    printf("SENDING HANDLER REQUEST !\n");
-
     /*
      * 17 bytes message
      *  LENGTH (4)        TYPE (1)     Index (4)      Begin (4)   Length (4)
@@ -49,19 +45,14 @@ int mbt_msg_send_handler_request(
     memset(buf, 0, 17);
     buf[3] = 13;
     buf[4] = MBT_MAGIC_REQUEST;
+
     putain_de_sa_race(stream->index, buf + 5);
     putain_de_sa_race(stream->begin, buf + 9);
     putain_de_sa_race(stream->length, buf + 13);
     stream->status = STREAM_STARTED;
 
-    for (size_t i = 0; i < 17; i++)
-    {
-        printf("%02X ", buf[i]);
-    }
-    printf("\n");
-
     int status = sendall(stream->client->fd, buf, 17);
-    if (status == 0)
+    if (status == MBT_HANDLER_SUCCESS)
     {
         stream->client->state = MBT_CLIENT_DOWNLOADING;
     }

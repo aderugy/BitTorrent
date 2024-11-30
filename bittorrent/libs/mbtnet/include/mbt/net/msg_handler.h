@@ -1,13 +1,14 @@
 #ifndef MSG_HANDLER_H
 #define MSG_HANDLER_H
 
+#include <errno.h>
 #include <mbt/net/msg.h>
-
-#include "mbt/net/net.h"
+#include <mbt/net/net.h>
 
 #define MBT_HANDLER_CLIENT_ERROR -1
-#define MBT_HANDLER_REQUEST_CLOSE 1
 #define MBT_HANDLER_SUCCESS 0
+#define MBT_HANDLER_REQUEST_CLOSE 1
+#define MBT_HANDLER_IGNORE 2
 
 #define MBT_EXTRACT_UINT32_T(msg, offset, varname)                             \
     uint32_t varname;                                                          \
@@ -16,6 +17,11 @@
 #define MBT_HANDLER_STATUS(status)                                             \
     if (status < 0)                                                            \
     {                                                                          \
+        if (errno != EINPROGRESS)                                              \
+        {                                                                      \
+            return MBT_HANDLER_IGNORE;                                         \
+        }                                                                      \
+                                                                               \
         return MBT_HANDLER_CLIENT_ERROR;                                       \
     }                                                                          \
                                                                                \

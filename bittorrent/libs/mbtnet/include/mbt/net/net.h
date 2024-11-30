@@ -70,6 +70,9 @@ int mbt_net_client_next_block(struct mbt_net_server *server,
 int mbt_net_client_start_stream(struct mbt_net_server *server,
                                 struct mbt_net_stream *stream);
 
+int mbt_net_stream_completed(struct mbt_net_server *server,
+                             struct mbt_net_client *client);
+
 struct mbt_net_server *mbt_net_server_init(struct mbt_net_context *ctx);
 void mbt_net_server_free(struct mbt_net_server *server);
 // SERVER FUNCTIONS

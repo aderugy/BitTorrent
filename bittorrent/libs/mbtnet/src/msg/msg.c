@@ -3,9 +3,9 @@
 #include <mbt/file/file_types.h>
 #include <mbt/net/msg.h>
 #include <mbt/net/net_types.h>
+#include <mbt/utils/logger.h>
 #include <mbt/utils/xalloc.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "mbt/net/msg_handler.h"
@@ -13,56 +13,23 @@
 
 void mbt_msg_print(struct mbt_msg *msg)
 {
-    static char *names[] = { "MBT_MAGIC_CHOKE",      "MBT_MAGIC_UNCHOKE",
-                             "MBT_MAGIC_INTERESTED", "MBT_MAGIC_NOT_INTERESTED",
-                             "MBT_MAGIC_HAVE",       "MBT_MAGIC_BITFIELD",
-                             "MBT_MAGIC_REQUEST",    "MBT_MAGIC_PIECE",
-                             "MBT_MAGIC_CANCEL" };
+    static char *names[] = { "CHOKE",          "UNCHOKE", "INTERESTED",
+                             "NOT_INTERESTED", "HAVE",    "BITFIELD",
+                             "REQUEST",        "PIECE",   "CANCEL" };
 
     size_t length = mbt_msg_length(msg);
     if (length == 0)
     {
-        printf("Keep Alive received!!\n\n");
+        logger("recv: keepalive\n");
         return;
     }
 
-    printf("---------------- NEW MESSAGE --%zu bytes--------\n\n", length);
-    printf("----- START RAW -----\n");
-    void *v_msg = msg;
-    unsigned char *c_msg = v_msg;
-    for (size_t i = 0; i < 4 + length; i++)
-    {
-        printf("%02X ", c_msg[i]);
-    }
-    printf("\n------ END RAW ------\n");
-
-    printf("\tType: %s\n", names[msg->type]);
-    printf("\tLength: %zu\n", length);
-    printf("-- BEGIN PAYLOAD --\n");
-    fwrite(msg->payload, sizeof(char), length - 1, stdout);
-    printf("\n-- END PAYLOAD --\n");
-    printf("---------------- END MESSAGE -----------------\n\n");
+    logger("recv: %s: %zu bytes\n", names[msg->type], length);
 }
 
 void mbt_msg_handshake_print(struct mbt_msg_handshake *msg)
 {
-    printf("Received handshake:\n");
-    printf("\tLen: %hhi\n", msg->len);
-
-    printf("\tProtocol: ");
-    fwrite(msg->protocol, 1, MBT_HANDSHAKE_PROTOCOL_LENGTH, stdout);
-
-    printf("\n\tInfo Hash: ");
-    for (size_t i = 0; i < MBT_H_LENGTH; i++)
-    {
-        unsigned char c = msg->info_hash[i];
-        printf("%02X", c);
-    }
-
-    char *peer_id = xcalloc(PEER_ID_LENGTH + 1, sizeof(char));
-    memcpy(peer_id, msg->peer_id, PEER_ID_LENGTH);
-    printf("\n\tPeer ID: %s\n\n", peer_id);
-    free(peer_id);
+    logger_buffer("recv: handshake", msg->peer_id, 20);
 }
 
 void mbt_msg_discard(struct mbt_net_client *client, size_t size)
@@ -166,8 +133,10 @@ bool mbt_msg_process(struct mbt_net_server *server,
         }
 
         mbt_msg_print(msg);
-        mbt_msg_handler(server, client, msg);
-        mbt_msg_discard(client, 4 + mbt_msg_length(msg));
+        if (mbt_msg_handler(server, client, msg) != MBT_HANDLER_IGNORE)
+        {
+            mbt_msg_discard(client, 4 + mbt_msg_length(msg));
+        }
     }
 
     return true;

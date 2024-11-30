@@ -15,5 +15,5 @@ void mbt_piece_reset(struct mbt_piece *piece)
         piece->data = NULL;
     }
 
-    memset(piece->status, 0, MBT_PIECE_NB_BLOCK);
+    memset(piece->status, 0, MBT_PIECE_NB_BLOCK * sizeof(int));
 }

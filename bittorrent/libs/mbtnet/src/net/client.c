@@ -41,18 +41,66 @@ void mbt_net_clients_print(struct mbt_net_client *clients)
         return;
     }
 
-    logger("CLIENT %hhi (%s)\n", clients->fd,
-           mbt_client_state_name(clients->state));
-    logger("-- START BUFFER (%zu) --\n", clients->read);
+    logger("CLIENT %hhi (%s) - Buffer (%zu)\n", clients->fd,
+           mbt_client_state_name(clients->state), clients->read);
 
-    for (size_t i = 0; i < clients->read; i++)
+    if (clients->read && clients->read < 200)
     {
-        unsigned char c = clients->buffer[i];
-        logger("%02X ", c);
+        logger_buffer("Client buffer", clients->buffer, clients->read);
     }
-    logger("\n\n");
 
     mbt_net_clients_print(clients->next);
+}
+
+int mbt_net_stream_completed(struct mbt_net_server *server,
+                             struct mbt_net_client *client)
+{
+    struct mbt_net_stream *stream = NULL;
+
+    for (size_t i = 0; i < server->streams->size; i++)
+    {
+        stream = fifo_pop(server->streams);
+
+        if (stream->client != client)
+        {
+            fifo_push(server->streams, stream);
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    if (!stream)
+    {
+        return MBT_HANDLER_CLIENT_ERROR;
+    }
+
+    struct mbt_file_handler *fh = server->ctx->fh;
+
+    uint32_t piece_index = stream->index;
+    struct mbt_piece *piece = fh->pieces[piece_index];
+    free(stream);
+
+    int piece_status = mbt_piece_check(fh, piece_index);
+    if (piece_status == MBT_PIECE_VALID)
+    {
+        if (!mbt_piece_write(fh, piece_index))
+        {
+            errx(EXIT_FAILURE, "mbt_net_stream_completed: failed to write");
+        }
+
+        client->state = MBT_CLIENT_READY;
+        piece->completed = true;
+        free(piece->data);
+    }
+    else if (piece_status == MBT_PIECE_INVALID)
+    {
+        mbt_piece_reset(piece);
+        return MBT_HANDLER_CLIENT_ERROR;
+    }
+
+    return MBT_HANDLER_SUCCESS;
 }
 
 int mbt_net_client_next_block(struct mbt_net_server *server,
@@ -165,10 +213,10 @@ bool mbt_net_peer_connect(struct mbt_net_server *server,
     if (strcmp(server->ctx->ip, peer->ip->data) == 0
         && strcmp(server->ctx->port, peer->port->data) == 0)
     {
-        warnx("Skipping our client...\n");
         return false;
     }
 
+    logger("Connecting from: %s:%s\n", server->ctx->ip, server->ctx->port);
     logger("Peer: %s:%s\n", peer->ip->data, peer->port->data);
 
     mbt_peer_init_addr(peer);
@@ -181,9 +229,11 @@ bool mbt_net_peer_connect(struct mbt_net_server *server,
     if (c_fd < 0)
     {
         perror(NULL);
-        warnx("socket: failed");
         return false;
     }
+
+    int flags = fcntl(c_fd, F_GETFL, 0);
+    fcntl(c_fd, F_SETFL, flags | O_NONBLOCK);
 
     struct addrinfo *addr = peer->addr;
     struct addrinfo *next = peer->addr;
@@ -194,7 +244,7 @@ bool mbt_net_peer_connect(struct mbt_net_server *server,
 
         int cstatus = connect(c_fd, addr->ai_addr, addr->ai_addrlen);
 
-        if (cstatus)
+        if (cstatus && errno != EINPROGRESS)
         {
             perror(NULL);
             warnx("connect: failed %d", errno);

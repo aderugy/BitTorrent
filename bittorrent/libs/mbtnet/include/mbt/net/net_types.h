@@ -31,7 +31,7 @@ struct mbt_net_context
     char *ip;
     char *port;
 
-    char *info_hash;
+    char info_hash[20];
     char *peer_id;
 
     uint16_t downloaded;

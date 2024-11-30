@@ -97,7 +97,7 @@ bool fill_torrent(struct mbt_torrent *torrent, struct mbt_be_node *node,
     {
         struct mbt_str str = mbt_be_encode(val);
         char *h = sha1(str.data, str.size);
-        memcpy(torrent->info->hash, h, 20);
+        memcpy(torrent->hash, h, 20);
 
         mbt_str_dtor(&str);
         free(h);

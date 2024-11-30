@@ -37,32 +37,20 @@ static size_t cb(void *data, size_t size, size_t nmemb, void *clientp)
     mem->size += realsize;
     mem->response[mem->size] = 0;
 
-    for (size_t i = 0; i < size * nmemb; i++)
-    {
-        unsigned char c = mem->response[i];
-
-        if (isprint(c))
-        {
-            logger("%c", c);
-        }
-        else
-        {
-            logger(" %02X ", c);
-        }
-    }
-    logger("\n");
-
     return realsize;
 }
 
 static char *get_tracker_url(CURL *curl, struct mbt_net_context *ctx)
 {
+    logger_buffer("Info Hash", ctx->info_hash, 20);
     char *info_hash = curl_easy_escape(curl, ctx->info_hash, 20);
     char *peer_id = curl_easy_escape(curl, ctx->peer_id, 20);
 
     char *url; // Full URL
-    asprintf(&url, "%s?info_hash=%s&peer_id=%s&ip=%s&port=%s", ctx->announce,
-             info_hash, peer_id, ctx->ip, ctx->port);
+    asprintf(
+        &url,
+        "%s?info_hash=%s&peer_id=%s&ip=%s&port=%s&uploaded=0&downloaded=0&",
+        ctx->announce, info_hash, peer_id, ctx->ip, ctx->port);
 
     free(info_hash);
     free(peer_id);
@@ -71,8 +59,8 @@ static char *get_tracker_url(CURL *curl, struct mbt_net_context *ctx)
 
 static void print_peer(struct mbt_peer *peer)
 {
-    logger("PEER (%s);\n\tip: %s\n\tport: %s\n\n", peer->id->data,
-           peer->ip->data, peer->port->data);
+    logger("PEER (%s); ip: %s port: %s\n", peer->id->data, peer->ip->data,
+           peer->port->data);
 }
 
 static struct mbt_peer *bdecode_peer(struct mbt_be_pair **bpeer)

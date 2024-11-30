@@ -34,7 +34,7 @@ struct mbt_net_context *mbt_net_context_init(struct mbt_torrent *t,
 
     ctx->announce = strdup(mbt_torrent_announce(t).data);
 
-    ctx->info_hash = strdup(t->info->pieces->data);
+    memcpy(ctx->info_hash, t->hash, 20);
     ctx->event = TRACKER_STARTED;
 
     ctx->left = t->info->length;
@@ -52,7 +52,6 @@ void mbt_net_context_free(struct mbt_net_context *ctx)
 
     free(ctx->ip);
     free(ctx->port);
-    free(ctx->info_hash);
     free(ctx->announce);
     free(ctx->peer_id);
     mbt_file_handler_free(ctx->fh);

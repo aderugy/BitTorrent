@@ -1,4 +1,5 @@
 #include <err.h>
+#include <errno.h>
 #include <mbt/net/msg.h>
 #include <mbt/net/net.h>
 #include <mbt/utils/xalloc.h>
@@ -129,7 +130,8 @@ void mbt_net_server_process_event(struct mbt_net_server *server,
 
         int out_status =
             mbt_net_server_process_out_events(server, client, current);
-        if (out_status != MBT_HANDLER_SUCCESS)
+        if (out_status != MBT_HANDLER_SUCCESS
+            && out_status != MBT_HANDLER_IGNORE)
         {
             mbt_net_clients_remove(server, clients, client_fd,
                                    out_status == MBT_HANDLER_REQUEST_CLOSE);
@@ -147,7 +149,13 @@ void mbt_net_server_process_event(struct mbt_net_server *server,
         int r = recv(client->fd, buffer, MBT_NET_BUFFER_SIZE, 0);
         if (r <= 0) // Case where connection ended
         {
+            if (r == -1 && errno == EINPROGRESS)
+            {
+                continue;
+            }
+
             mbt_net_clients_remove(server, clients, client_fd, r == 0);
+            continue;
         }
         else // Process data
         {
